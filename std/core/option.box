@@ -1,0 +1,189 @@
+//! Option<T> - 可选值类型
+//!
+//! Option<T> 表示一个可能有值的类型，类似于其他语言中的 Maybe 或 Nullable 类型。
+//! 它有两个变体：
+//! - Some(T): 包含一个值 T
+//! - None: 表示没有值
+
+module core::option;
+
+/// Option<T> 枚举定义
+pub enum Option<T> {
+    /// 包含一个值
+    Some(T),
+    /// 没有值
+    None,
+}
+
+/// Option<T> 的方法实现
+impl<T> Option<T> {
+    /// 检查 Option 是否为 Some
+    pub fn is_some(&self) -> bool {
+        match self {
+            Option::Some(_) => true,
+            Option::None => false,
+        }
+    }
+
+    /// 检查 Option 是否为 None
+    pub fn is_none(&self) -> bool {
+        match self {
+            Option::Some(_) => false,
+            Option::None => true,
+        }
+    }
+
+    /// 获取 Option 中的值，如果是 None 则 panic
+    pub fn unwrap(self) -> T {
+        match self {
+            Option::Some(val) => val,
+            Option::None => panic("called `Option::unwrap()` on a `None` value"),
+        }
+    }
+
+    /// 获取 Option 中的值，如果是 None 则返回默认值
+    pub fn unwrap_or(self, default: T) -> T {
+        match self {
+            Option::Some(val) => val,
+            Option::None => default,
+        }
+    }
+
+    /// 获取 Option 中的值，如果是 None 则通过函数计算默认值
+    pub fn unwrap_or_else<F>(self, f: F) -> T
+    where
+        F: FnOnce() -> T,
+    {
+        match self {
+            Option::Some(val) => val,
+            Option::None => f(),
+        }
+    }
+
+    /// 获取 Option 中的引用
+    pub fn as_ref(&self) -> Option<&T> {
+        match self {
+            Option::Some(ref val) => Option::Some(val),
+            Option::None => Option::None,
+        }
+    }
+
+    /// 获取 Option 中的可变引用
+    pub fn as_mut(&mut self) -> Option<&mut T> {
+        match self {
+            Option::Some(ref mut val) => Option::Some(val),
+            Option::None => Option::None,
+        }
+    }
+
+    /// 如果 Option 是 Some，则对其中的值应用函数 f，返回新的 Option
+    pub fn map<U, F>(self, f: F) -> Option<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        match self {
+            Option::Some(val) => Option::Some(f(val)),
+            Option::None => Option::None,
+        }
+    }
+
+    /// 如果 Option 是 Some，则对其中的值应用函数 f，否则返回默认值
+    pub fn map_or<U, F>(self, default: U, f: F) -> U
+    where
+        F: FnOnce(T) -> U,
+    {
+        match self {
+            Option::Some(val) => f(val),
+            Option::None => default,
+        }
+    }
+
+    /// 如果 Option 是 Some，则对其中的值应用函数 f，否则计算默认值
+    pub fn map_or_else<U, D, F>(self, default: D, f: F) -> U
+    where
+        D: FnOnce() -> U,
+        F: FnOnce(T) -> U,
+    {
+        match self {
+            Option::Some(val) => f(val),
+            Option::None => default(),
+        }
+    }
+
+    /// 如果 Option 是 Some，则对其中的值应用返回 Option 的函数 f
+    pub fn and_then<U, F>(self, f: F) -> Option<U>
+    where
+        F: FnOnce(T) -> Option<U>,
+    {
+        match self {
+            Option::Some(val) => f(val),
+            Option::None => Option::None,
+        }
+    }
+
+    /// 如果 Option 是 None，则返回另一个 Option
+    pub fn or(self, other: Option<T>) -> Option<T> {
+        match self {
+            Option::Some(_) => self,
+            Option::None => other,
+        }
+    }
+
+    /// 如果 Option 是 None，则通过函数计算另一个 Option
+    pub fn or_else<F>(self, f: F) -> Option<T>
+    where
+        F: FnOnce() -> Option<T>,
+    {
+        match self {
+            Option::Some(_) => self,
+            Option::None => f(),
+        }
+    }
+
+    /// 如果 Option 是 Some 且满足条件 pred，则返回 Some，否则返回 None
+    pub fn filter<P>(self, pred: P) -> Option<T>
+    where
+        P: FnOnce(&T) -> bool,
+    {
+        match self {
+            Option::Some(val) => {
+                if pred(&val) {
+                    Option::Some(val)
+                } else {
+                    Option::None
+                }
+            }
+            Option::None => Option::None,
+        }
+    }
+
+    /// 获取 Option 中的值，如果是 None 则 panic 并显示自定义消息
+    pub fn expect(self, msg: &str) -> T {
+        match self {
+            Option::Some(val) => val,
+            Option::None => panic(msg),
+        }
+    }
+
+    /// 如果 Option 是 Some，则对其中的值应用函数 f（副作用）
+    pub fn inspect<F>(self, f: F) -> Option<T>
+    where
+        F: FnOnce(&T),
+    {
+        match &self {
+            Option::Some(val) => f(val),
+            Option::None => {},
+        }
+        self
+    }
+}
+
+/// 创建 Some 值的便捷函数
+pub fn some<T>(value: T) -> Option<T> {
+    Option::Some(value)
+}
+
+/// 创建 None 值的便捷函数
+pub fn none<T>() -> Option<T> {
+    Option::None
+}

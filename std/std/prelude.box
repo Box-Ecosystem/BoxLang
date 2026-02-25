@@ -1,0 +1,28 @@
+//! std::prelude - Common types and functions that are automatically imported
+//!
+//! All contents of this module are automatically imported into every module's scope
+
+pub use core::option::Option;
+pub use core::option::Option::Some;
+pub use core::option::Option::None;
+
+pub use core::result::Result;
+pub use core::result::Result::Ok;
+pub use core::result::Result::Err;
+
+pub use std::io::println;
+pub use std::io::print;
+pub use std::io::eprintln;
+pub use std::io::eprint;
+
+pub use std::string::String;
+pub use std::vec::Vec;
+pub use std::boxed::Box;
+
+pub use core::clone::Clone;
+pub use core::cmp::PartialEq;
+pub use core::cmp::Eq;
+pub use core::fmt::Debug;
+pub use core::default::Default;
+pub use core::marker::Copy;
+pub use core::marker::Sized;

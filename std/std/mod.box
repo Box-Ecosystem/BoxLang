@@ -1,0 +1,32 @@
+//! std - BoxLang 标准库
+//!
+//! 这个模块提供了 BoxLang 的完整标准库功能。
+//! 它依赖于操作系统提供的功能。
+
+module std;
+
+// 核心库自动导入
+pub use core::*;
+
+// 导出子模块
+pub use std::io;
+pub use std::math;
+pub use std::time;
+
+// 标准库预导入模块
+/// 标准库预导入内容
+pub mod prelude {
+    pub use core::option::Option;
+    pub use core::option::Some;
+    pub use core::option::None;
+    pub use core::result::Result;
+    pub use core::result::Ok;
+    pub use core::result::Err;
+    pub use core::mem::Box;
+    pub use std::io::println;
+    pub use std::io::print;
+    pub use std::io::eprintln;
+    pub use std::io::eprint;
+    pub use std::time::Duration;
+    pub use std::time::Instant;
+}

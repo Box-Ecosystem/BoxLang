@@ -1,0 +1,363 @@
+//! zetboxos::uart - UART serial communication module
+//! 
+//! Provides UART (Universal Asynchronous Receiver-Transmitter) serial communication functionality.
+//! This is a zetboxos embedded system specific module.
+
+module zetboxos::uart;
+
+use core::option::Option;
+use core::result::Result;
+use core::slice;
+
+/// UART port number
+pub enum UartPort {
+    /// UART0 (usually used for debugging)
+    Uart0 = 0,
+    /// UART1
+    Uart1 = 1,
+    /// UART2
+    Uart2 = 2,
+}
+
+/// UART configuration
+pub struct UartConfig {
+    /// Baud rate
+    pub baud_rate: u32,
+    /// Data bits (5-9)
+    pub data_bits: u8,
+    /// Stop bits (1 or 2)
+    pub stop_bits: u8,
+    /// Parity bit
+    pub parity: Parity,
+    /// Flow control
+    pub flow_control: FlowControl,
+}
+
+impl UartConfig {
+    /// Create default configuration (115200 8N1)
+    pub fn default() -> UartConfig {
+        UartConfig {
+            baud_rate: 115200,
+            data_bits: 8,
+            stop_bits: 1,
+            parity: Parity::None,
+            flow_control: FlowControl::None,
+        }
+    }
+
+    /// Create 9600 baud rate configuration
+    pub fn baud_9600() -> UartConfig {
+        UartConfig {
+            baud_rate: 9600,
+            ..Self::default()
+        }
+    }
+
+    /// Create 115200 baud rate configuration
+    pub fn baud_115200() -> UartConfig {
+        UartConfig {
+            baud_rate: 115200,
+            ..Self::default()
+        }
+    }
+
+    /// Set baud rate
+    pub fn with_baud_rate(self, baud_rate: u32) -> UartConfig {
+        UartConfig { baud_rate, ..self }
+    }
+
+    /// Set data bits
+    pub fn with_data_bits(self, data_bits: u8) -> UartConfig {
+        UartConfig { data_bits, ..self }
+    }
+
+    /// Set stop bits
+    pub fn with_stop_bits(self, stop_bits: u8) -> UartConfig {
+        UartConfig { stop_bits, ..self }
+    }
+
+    /// Set parity
+    pub fn with_parity(self, parity: Parity) -> UartConfig {
+        UartConfig { parity, ..self }
+    }
+
+    /// Set flow control
+    pub fn with_flow_control(self, flow_control: FlowControl) -> UartConfig {
+        UartConfig { flow_control, ..self }
+    }
+}
+
+/// Parity type
+pub enum Parity {
+    /// No parity
+    None,
+    /// Odd parity
+    Odd,
+    /// Even parity
+    Even,
+}
+
+/// Flow control type
+pub enum FlowControl {
+    /// No flow control
+    None,
+    /// RTS/CTS hardware flow control
+    RtsCts,
+    /// XON/XOFF software flow control
+    XonXoff,
+}
+
+/// UART error type
+pub enum UartError {
+    /// Initialization failed
+    InitFailed,
+    /// Invalid baud rate
+    InvalidBaudRate,
+    /// Send failed
+    SendFailed,
+    /// Receive failed
+    ReceiveFailed,
+    /// Buffer overflow
+    BufferOverflow,
+    /// Frame error
+    FrameError,
+    /// Parity error
+    ParityError,
+    /// Timeout
+    Timeout,
+}
+
+/// UART structure
+pub struct Uart {
+    /// Port number
+    port: UartPort,
+    /// Configuration
+    config: UartConfig,
+}
+
+impl Uart {
+    /// Initialize UART
+    pub fn new(port: UartPort, config: UartConfig) -> Result<Uart, UartError> {
+        unsafe {
+            if uart_init_internal(port as u32, &config) != 0 {
+                Result::Err(UartError::InitFailed)
+            } else {
+                Result::Ok(Uart { port, config })
+            }
+        }
+    }
+
+    /// Initialize UART with default configuration
+    pub fn new_default(port: UartPort) -> Result<Uart, UartError> {
+        Self::new(port, UartConfig::default())
+    }
+
+    /// Send a byte
+    pub fn send_byte(&self, byte: u8) -> Result<(), UartError> {
+        unsafe {
+            if uart_send_byte_internal(self.port as u32, byte) != 0 {
+                Result::Err(UartError::SendFailed)
+            } else {
+                Result::Ok(())
+            }
+        }
+    }
+
+    /// Send byte array
+    pub fn send_bytes(&self, data: &[u8]) -> Result<usize, UartError> {
+        let mut sent = 0;
+        for byte in data {
+            self.send_byte(*byte)?;
+            sent += 1;
+        }
+        Result::Ok(sent)
+    }
+
+    /// Send string
+    pub fn send_string(&self, s: &str) -> Result<(), UartError> {
+        unsafe {
+            let bytes = s.as_bytes();
+            if uart_send_bytes_internal(self.port as u32, bytes.as_ptr(), bytes.len()) != 0 {
+                Result::Err(UartError::SendFailed)
+            } else {
+                Result::Ok(())
+            }
+        }
+    }
+
+    /// Send string with newline
+    pub fn send_line(&self, s: &str) -> Result<(), UartError> {
+        self.send_string(s)?;
+        self.send_byte(b'\n')
+    }
+
+    /// Receive a byte (blocking)
+    pub fn receive_byte(&self) -> Result<u8, UartError> {
+        unsafe {
+            let result = uart_receive_byte_internal(self.port as u32);
+            if result < 0 {
+                Result::Err(UartError::ReceiveFailed)
+            } else {
+                Result::Ok(result as u8)
+            }
+        }
+    }
+
+    /// Receive a byte (non-blocking)
+    pub fn try_receive_byte(&self) -> Option<u8> {
+        unsafe {
+            if uart_available_internal(self.port as u32) > 0 {
+                let result = uart_receive_byte_internal(self.port as u32);
+                if result >= 0 {
+                    Option::Some(result as u8)
+                } else {
+                    Option::None
+                }
+            } else {
+                Option::None
+            }
+        }
+    }
+
+    /// Receive multiple bytes into buffer
+    pub fn receive_bytes(&self, buf: &mut [u8]) -> Result<usize, UartError> {
+        let mut received = 0;
+        for i in 0..buf.len() {
+            match self.try_receive_byte() {
+                Option::Some(byte) => {
+                    buf[i] = byte;
+                    received += 1;
+                }
+                Option::None => break,
+            }
+        }
+        Result::Ok(received)
+    }
+
+    /// Receive a line of string (ending with \n)
+    pub fn receive_line(&self, buf: &mut [u8]) -> Result<usize, UartError> {
+        let mut i = 0;
+        while i < buf.len() {
+            let byte = self.receive_byte()?;
+            buf[i] = byte;
+            i += 1;
+            if byte == b'\n' {
+                break;
+            }
+        }
+        Result::Ok(i)
+    }
+
+    /// Check if receive buffer has data
+    pub fn available(&self) -> usize {
+        unsafe { uart_available_internal(self.port as u32) as usize }
+    }
+
+    /// Wait for transmission to complete
+    pub fn flush(&self) -> Result<(), UartError> {
+        unsafe {
+            if uart_flush_internal(self.port as u32) != 0 {
+                Result::Err(UartError::Timeout)
+            } else {
+                Result::Ok(())
+            }
+        }
+    }
+
+    /// Close UART
+    pub fn close(&self) -> Result<(), UartError> {
+        unsafe {
+            if uart_close_internal(self.port as u32) != 0 {
+                Result::Err(UartError::InitFailed)
+            } else {
+                Result::Ok(())
+            }
+        }
+    }
+
+    /// Get port number
+    pub fn port(&self) -> UartPort {
+        self.port
+    }
+
+    /// Get configuration
+    pub fn config(&self) -> &UartConfig {
+        &self.config
+    }
+}
+
+/// Convenience function: send byte to UART0
+pub fn send(byte: u8) -> Result<(), UartError> {
+    unsafe {
+        if uart_send_byte_internal(UartPort::Uart0 as u32, byte) != 0 {
+            Result::Err(UartError::SendFailed)
+        } else {
+            Result::Ok(())
+        }
+    }
+}
+
+/// Convenience function: send string to UART0
+pub fn send_str(s: &str) -> Result<(), UartError> {
+    unsafe {
+        let bytes = s.as_bytes();
+        if uart_send_bytes_internal(UartPort::Uart0 as u32, bytes.as_ptr(), bytes.len()) != 0 {
+            Result::Err(UartError::SendFailed)
+        } else {
+            Result::Ok(())
+        }
+    }
+}
+
+/// Convenience function: send string with newline to UART0
+pub fn sendln(s: &str) -> Result<(), UartError> {
+    send_str(s)?;
+    send(b'\n')
+}
+
+/// Convenience function: receive a byte from UART0
+pub fn receive() -> Result<u8, UartError> {
+    unsafe {
+        let result = uart_receive_byte_internal(UartPort::Uart0 as u32);
+        if result < 0 {
+            Result::Err(UartError::ReceiveFailed)
+        } else {
+            Result::Ok(result as u8)
+        }
+    }
+}
+
+/// Convenience function: check if UART0 has data
+pub fn available() -> usize {
+    unsafe { uart_available_internal(UartPort::Uart0 as u32) as usize }
+}
+
+/// Formatted output to UART
+pub fn printf(format: &str, args: &[&str]) -> Result<(), UartError> {
+    let formatted = std::io::format(format, args);
+    send_str(&formatted)
+}
+
+/// Debug print (output to UART0)
+pub fn debug(msg: &str) {
+    let _ = sendln(&format!("[DEBUG] {}", msg));
+}
+
+/// Info print (output to UART0)
+pub fn info(msg: &str) {
+    let _ = sendln(&format!("[INFO] {}", msg));
+}
+
+/// Error print (output to UART0)
+pub fn error(msg: &str) {
+    let _ = sendln(&format!("[ERROR] {}", msg));
+}
+
+/// Internal function declarations (mapped to zetboxos syscalls)
+extern "builtin" fn uart_init_internal(port: u32, config: &UartConfig) -> i32;
+extern "builtin" fn uart_send_byte_internal(port: u32, byte: u8) -> i32;
+extern "builtin" fn uart_send_bytes_internal(port: u32, data: *const u8, len: usize) -> i32;
+extern "builtin" fn uart_receive_byte_internal(port: u32) -> i32;
+extern "builtin" fn uart_available_internal(port: u32) -> i32;
+extern "builtin" fn uart_flush_internal(port: u32) -> i32;
+extern "builtin" fn uart_close_internal(port: u32) -> i32;

@@ -1,0 +1,510 @@
+//! core::str - 字符串核心模块
+//!
+//! 提供对字符串切片 str 的核心操作。
+//! 注意：String 类型在 std::string 中定义，这里只处理 &str。
+
+module core::str;
+
+use core::option::Option;
+use core::result::Result;
+use core::slice;
+
+/// 字符串切片 &str 的核心操作
+
+/// 获取字符串的长度（字节数）
+pub fn len(s: &str) -> usize {
+    // 内部实现：字符串切片在内存中表示为 (ptr, length)
+    unsafe { str_len_internal(s) }
+}
+
+/// 检查字符串是否为空
+pub fn is_empty(s: &str) -> bool {
+    len(s) == 0
+}
+
+/// 获取字符串的字节数（与 len 相同）
+pub fn bytes_len(s: &str) -> usize {
+    len(s)
+}
+
+/// 安全地获取字符串中的字节
+pub fn get_byte(s: &str, index: usize) -> Option<u8> {
+    if index < len(s) {
+        Option::Some(unsafe { str_byte_at_internal(s, index) })
+    } else {
+        Option::None
+    }
+}
+
+/// 获取字符串的第一个字符（UTF-8）
+pub fn chars(s: &str) -> Chars {
+    Chars {
+        s: s,
+        pos: 0,
+    }
+}
+
+/// 获取字符串的字符迭代器（反向）
+pub fn chars_rev(s: &str) -> CharsRev {
+    CharsRev {
+        s: s,
+        pos: len(s),
+    }
+}
+
+/// 获取字符串的字符数量（UTF-8 解码）
+pub fn char_count(s: &str) -> usize {
+    let mut count = 0;
+    let mut i = 0;
+    let length = len(s);
+    
+    while i < length {
+        let b = unsafe { str_byte_at_internal(s, i) };
+        // UTF-8 编码规则
+        if b < 0x80 {
+            i += 1; // ASCII
+        } else if b < 0xE0 {
+            i += 2; // 2-byte sequence
+        } else if b < 0xF0 {
+            i += 3; // 3-byte sequence
+        } else {
+            i += 4; // 4-byte sequence
+        }
+        count += 1;
+    }
+    
+    count
+}
+
+/// 获取字符串的第一个字符
+pub fn first_char(s: &str) -> Option<char> {
+    if is_empty(s) {
+        return Option::None;
+    }
+    
+    let b0 = unsafe { str_byte_at_internal(s, 0) };
+    
+    if b0 < 0x80 {
+        Option::Some(b0 as char)
+    } else if b0 < 0xE0 && len(s) >= 2 {
+        let b1 = unsafe { str_byte_at_internal(s, 1) };
+        Option::Some(decode_utf8_2(b0, b1))
+    } else if b0 < 0xF0 && len(s) >= 3 {
+        let b1 = unsafe { str_byte_at_internal(s, 1) };
+        let b2 = unsafe { str_byte_at_internal(s, 2) };
+        Option::Some(decode_utf8_3(b0, b1, b2))
+    } else if len(s) >= 4 {
+        let b1 = unsafe { str_byte_at_internal(s, 1) };
+        let b2 = unsafe { str_byte_at_internal(s, 2) };
+        let b3 = unsafe { str_byte_at_internal(s, 3) };
+        Option::Some(decode_utf8_4(b0, b1, b2, b3))
+    } else {
+        Option::None // 无效的 UTF-8
+    }
+}
+
+/// 查找子字符串的位置
+pub fn find(s: &str, pattern: &str) -> Option<usize> {
+    if is_empty(pattern) {
+        return Option::Some(0);
+    }
+    
+    let s_len = len(s);
+    let p_len = len(pattern);
+    
+    if p_len > s_len {
+        return Option::None;
+    }
+    
+    // 简单字符串匹配（KMP 算法可以后续优化）
+    for i in 0..=(s_len - p_len) {
+        if unsafe { str_starts_with_at_internal(s, i, pattern) } {
+            return Option::Some(i);
+        }
+    }
+    
+    Option::None
+}
+
+/// 从右侧查找子字符串
+pub fn rfind(s: &str, pattern: &str) -> Option<usize> {
+    if is_empty(pattern) {
+        return Option::Some(len(s));
+    }
+    
+    let s_len = len(s);
+    let p_len = len(pattern);
+    
+    if p_len > s_len {
+        return Option::None;
+    }
+    
+    for i in (0..=(s_len - p_len)).rev() {
+        if unsafe { str_starts_with_at_internal(s, i, pattern) } {
+            return Option::Some(i);
+        }
+    }
+    
+    Option::None
+}
+
+/// 检查字符串是否包含子字符串
+pub fn contains(s: &str, pattern: &str) -> bool {
+    find(s, pattern).is_some()
+}
+
+/// 检查字符串是否以指定前缀开头
+pub fn starts_with(s: &str, prefix: &str) -> bool {
+    if is_empty(prefix) {
+        return true;
+    }
+    
+    let s_len = len(s);
+    let p_len = len(prefix);
+    
+    if p_len > s_len {
+        return false;
+    }
+    
+    unsafe { str_starts_with_at_internal(s, 0, prefix) }
+}
+
+/// 检查字符串是否以指定后缀结尾
+pub fn ends_with(s: &str, suffix: &str) -> bool {
+    if is_empty(suffix) {
+        return true;
+    }
+    
+    let s_len = len(s);
+    let x_len = len(suffix);
+    
+    if x_len > s_len {
+        return false;
+    }
+    
+    unsafe { str_ends_with_internal(s, suffix) }
+}
+
+/// 去除字符串两端的空白字符
+pub fn trim(s: &str) -> &str {
+    trim_end(trim_start(s))
+}
+
+/// 去除字符串开头的空白字符
+pub fn trim_start(s: &str) -> &str {
+    let mut start = 0;
+    let length = len(s);
+    
+    while start < length {
+        let b = unsafe { str_byte_at_internal(s, start) };
+        if !is_whitespace(b) {
+            break;
+        }
+        start += 1;
+    }
+    
+    unsafe { str_slice_internal(s, start, length) }
+}
+
+/// 去除字符串结尾的空白字符
+pub fn trim_end(s: &str) -> &str {
+    let mut end = len(s);
+    
+    while end > 0 {
+        let b = unsafe { str_byte_at_internal(s, end - 1) };
+        if !is_whitespace(b) {
+            break;
+        }
+        end -= 1;
+    }
+    
+    unsafe { str_slice_internal(s, 0, end) }
+}
+
+/// 将字符串分割为子字符串（按分隔符）
+pub fn split(s: &str, delimiter: &str) -> Split {
+    Split {
+        s: s,
+        delimiter: delimiter,
+        pos: 0,
+    }
+}
+
+/// 将字符串按行分割
+pub fn lines(s: &str) -> Lines {
+    Lines {
+        s: s,
+        pos: 0,
+    }
+}
+
+/// 检查字符串是否全部由 ASCII 字符组成
+pub fn is_ascii(s: &str) -> bool {
+    for i in 0..len(s) {
+        let b = unsafe { str_byte_at_internal(s, i) };
+        if b > 0x7F {
+            return false;
+        }
+    }
+    true
+}
+
+/// 将字符串转换为大写（仅 ASCII）
+pub fn to_ascii_uppercase(s: &str) -> String {
+    let mut result = String::with_capacity(len(s));
+    for i in 0..len(s) {
+        let b = unsafe { str_byte_at_internal(s, i) };
+        if b >= b'a' && b <= b'z' {
+            result.push((b - 32) as char);
+        } else {
+            result.push(b as char);
+        }
+    }
+    result
+}
+
+/// 将字符串转换为小写（仅 ASCII）
+pub fn to_ascii_lowercase(s: &str) -> String {
+    let mut result = String::with_capacity(len(s));
+    for i in 0..len(s) {
+        let b = unsafe { str_byte_at_internal(s, i) };
+        if b >= b'A' && b <= b'Z' {
+            result.push((b + 32) as char);
+        } else {
+            result.push(b as char);
+        }
+    }
+    result
+}
+
+/// 比较两个字符串（字典序）
+pub fn compare(a: &str, b: &str) -> i32 {
+    let a_len = len(a);
+    let b_len = len(b);
+    let min_len = if a_len < b_len { a_len } else { b_len };
+    
+    for i in 0..min_len {
+        let a_byte = unsafe { str_byte_at_internal(a, i) };
+        let b_byte = unsafe { str_byte_at_internal(b, i) };
+        
+        if a_byte < b_byte {
+            return -1;
+        } else if a_byte > b_byte {
+            return 1;
+        }
+    }
+    
+    if a_len < b_len {
+        -1
+    } else if a_len > b_len {
+        1
+    } else {
+        0
+    }
+}
+
+/// 检查两个字符串是否相等
+pub fn eq(a: &str, b: &str) -> bool {
+    if len(a) != len(b) {
+        return false;
+    }
+    compare(a, b) == 0
+}
+
+/// 获取子字符串
+pub fn substring(s: &str, start: usize, end: usize) -> Option<&str> {
+    let length = len(s);
+    if start > end || end > length {
+        Option::None
+    } else {
+        Option::Some(unsafe { str_slice_internal(s, start, end) })
+    }
+}
+
+/// 字符迭代器结构
+pub struct Chars<'a> {
+    s: &'a str,
+    pos: usize,
+}
+
+impl<'a> Iterator for Chars<'a> {
+    type Item = char;
+
+    fn next(&mut self) -> Option<char> {
+        if self.pos >= len(self.s) {
+            return Option::None;
+        }
+        
+        let b0 = unsafe { str_byte_at_internal(self.s, self.pos) };
+        let (ch, size) = if b0 < 0x80 {
+            (b0 as char, 1)
+        } else if b0 < 0xE0 {
+            let b1 = unsafe { str_byte_at_internal(self.s, self.pos + 1) };
+            (decode_utf8_2(b0, b1), 2)
+        } else if b0 < 0xF0 {
+            let b1 = unsafe { str_byte_at_internal(self.s, self.pos + 1) };
+            let b2 = unsafe { str_byte_at_internal(self.s, self.pos + 2) };
+            (decode_utf8_3(b0, b1, b2), 3)
+        } else {
+            let b1 = unsafe { str_byte_at_internal(self.s, self.pos + 1) };
+            let b2 = unsafe { str_byte_at_internal(self.s, self.pos + 2) };
+            let b3 = unsafe { str_byte_at_internal(self.s, self.pos + 3) };
+            (decode_utf8_4(b0, b1, b2, b3), 4)
+        };
+        
+        self.pos += size;
+        Option::Some(ch)
+    }
+}
+
+/// 反向字符迭代器结构
+pub struct CharsRev<'a> {
+    s: &'a str,
+    pos: usize,
+}
+
+impl<'a> Iterator for CharsRev<'a> {
+    type Item = char;
+
+    fn next(&mut self) -> Option<char> {
+        if self.pos == 0 {
+            return Option::None;
+        }
+        
+        // 找到前一个字符的起始位置
+        let mut start = self.pos - 1;
+        while start > 0 && (unsafe { str_byte_at_internal(self.s, start) } & 0xC0) == 0x80 {
+            start -= 1;
+        }
+        
+        let b0 = unsafe { str_byte_at_internal(self.s, start) };
+        let ch = if b0 < 0x80 {
+            b0 as char
+        } else if b0 < 0xE0 {
+            let b1 = unsafe { str_byte_at_internal(self.s, start + 1) };
+            decode_utf8_2(b0, b1)
+        } else if b0 < 0xF0 {
+            let b1 = unsafe { str_byte_at_internal(self.s, start + 1) };
+            let b2 = unsafe { str_byte_at_internal(self.s, start + 2) };
+            decode_utf8_3(b0, b1, b2)
+        } else {
+            let b1 = unsafe { str_byte_at_internal(self.s, start + 1) };
+            let b2 = unsafe { str_byte_at_internal(self.s, start + 2) };
+            let b3 = unsafe { str_byte_at_internal(self.s, start + 3) };
+            decode_utf8_4(b0, b1, b2, b3)
+        };
+        
+        self.pos = start;
+        Option::Some(ch)
+    }
+}
+
+/// 分割迭代器
+pub struct Split<'a> {
+    s: &'a str,
+    delimiter: &'a str,
+    pos: usize,
+}
+
+impl<'a> Iterator for Split<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<&'a str> {
+        if self.pos > len(self.s) {
+            return Option::None;
+        }
+        
+        let remaining = unsafe { str_slice_internal(self.s, self.pos, len(self.s)) };
+        
+        match find(remaining, self.delimiter) {
+            Option::Some(idx) => {
+                let result = unsafe { str_slice_internal(self.s, self.pos, self.pos + idx) };
+                self.pos += idx + len(self.delimiter);
+                Option::Some(result)
+            }
+            Option::None => {
+                let result = remaining;
+                self.pos = len(self.s) + 1; // 标记为完成
+                Option::Some(result)
+            }
+        }
+    }
+}
+
+/// 行迭代器
+pub struct Lines<'a> {
+    s: &'a str,
+    pos: usize,
+}
+
+impl<'a> Iterator for Lines<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<&'a str> {
+        if self.pos > len(self.s) {
+            return Option::None;
+        }
+        
+        let remaining = unsafe { str_slice_internal(self.s, self.pos, len(self.s)) };
+        
+        // 查找换行符
+        for i in 0..len(remaining) {
+            let b = unsafe { str_byte_at_internal(remaining, i) };
+            if b == b'\n' {
+                let result = unsafe { str_slice_internal(self.s, self.pos, self.pos + i) };
+                // 处理 \r\n
+                let next_pos = if i > 0 && unsafe { str_byte_at_internal(remaining, i - 1) } == b'\r' {
+                    self.pos + i - 1
+                } else {
+                    self.pos + i
+                };
+                self.pos = next_pos + 2; // 跳过换行符
+                return Option::Some(result);
+            }
+        }
+        
+        // 最后一行
+        let result = remaining;
+        self.pos = len(self.s) + 1;
+        Option::Some(result)
+    }
+}
+
+/// 辅助函数：检查字节是否为空白字符
+fn is_whitespace(b: u8) -> bool {
+    b == b' ' || b == b'\t' || b == b'\n' || b == b'\r' || b == 0x0B || b == 0x0C
+}
+
+/// 辅助函数：解码 2 字节 UTF-8
+fn decode_utf8_2(b0: u8, b1: u8) -> char {
+    let codepoint = ((b0 as u32 & 0x1F) << 6) | (b1 as u32 & 0x3F);
+    unsafe { core::char::from_u32_unchecked(codepoint) }
+}
+
+/// 辅助函数：解码 3 字节 UTF-8
+fn decode_utf8_3(b0: u8, b1: u8, b2: u8) -> char {
+    let codepoint = ((b0 as u32 & 0x0F) << 12) | ((b1 as u32 & 0x3F) << 6) | (b2 as u32 & 0x3F);
+    unsafe { core::char::from_u32_unchecked(codepoint) }
+}
+
+/// 辅助函数：解码 4 字节 UTF-8
+fn decode_utf8_4(b0: u8, b1: u8, b2: u8, b3: u8) -> char {
+    let codepoint = ((b0 as u32 & 0x07) << 18) | ((b1 as u32 & 0x3F) << 12) | 
+                    ((b2 as u32 & 0x3F) << 6) | (b3 as u32 & 0x3F);
+    unsafe { core::char::from_u32_unchecked(codepoint) }
+}
+
+/// 内部函数：获取字符串长度
+extern "builtin" fn str_len_internal(s: &str) -> usize;
+
+/// 内部函数：获取字符串字节
+extern "builtin" fn str_byte_at_internal(s: &str, index: usize) -> u8;
+
+/// 内部函数：检查字符串在指定位置是否以 pattern 开头
+extern "builtin" fn str_starts_with_at_internal(s: &str, pos: usize, pattern: &str) -> bool;
+
+/// 内部函数：检查字符串是否以 suffix 结尾
+extern "builtin" fn str_ends_with_internal(s: &str, suffix: &str) -> bool;
+
+/// 内部函数：获取字符串切片
+extern "builtin" fn str_slice_internal(s: &str, start: usize, end: usize) -> &str;

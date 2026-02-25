@@ -1,0 +1,36 @@
+module chained_pipeline;
+
+fn increment(x: i32) -> i32 {
+    return x + 1;
+}
+
+fn double(x: i32) -> i32 {
+    return x * 2;
+}
+
+fn square(x: i32) -> i32 {
+    return x * x;
+}
+
+fn negate(x: i32) -> i32 {
+    return -x;
+}
+
+pub fn main() {
+    let x = 3;
+
+    let result1 = x |> increment |> double;
+    println("3 |> increment |> double = " + result1.to_string());
+
+    let result2 = x |> double |> square;
+    println("3 |> double |> square = " + result2.to_string());
+
+    let result3 = x |> increment |> double |> square;
+    println("3 |> increment |> double |> square = " + result3.to_string());
+
+    let result4 = x |> double |> square |> negate;
+    println("3 |> double |> square |> negate = " + result4.to_string());
+
+    let result5 = 10 |> increment |> double |> square;
+    println("10 |> increment |> double |> square = " + result5.to_string());
+}

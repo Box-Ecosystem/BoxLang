@@ -1,0 +1,27 @@
+//! zetboxos - zetboxos embedded system standard library
+//! 
+//! This module provides zetboxos embedded system specific functionality,
+//! including GPIO, UART, I2C and other hardware interface controls.
+
+module zetboxos;
+
+// Export submodules
+pub use zetboxos::gpio;
+pub use zetboxos::uart;
+pub use zetboxos::i2c;
+
+// zetboxos prelude module
+/// zetboxos prelude contents
+pub mod prelude {
+    pub use zetboxos::gpio::Pin;
+    pub use zetboxos::gpio::PinMode;
+    pub use zetboxos::gpio::PinLevel;
+    pub use zetboxos::gpio::Led;
+    pub use zetboxos::gpio::Button;
+    pub use zetboxos::uart::Uart;
+    pub use zetboxos::uart::UartConfig;
+    pub use zetboxos::uart::UartPort;
+    pub use zetboxos::i2c::I2cMaster;
+    pub use zetboxos::i2c::I2cBus;
+    pub use zetboxos::i2c::I2cAddress;
+}

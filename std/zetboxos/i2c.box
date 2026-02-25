@@ -1,0 +1,355 @@
+//! zetboxos::i2c - I2C bus communication module
+//! 
+//! Provides I2C (Inter-Integrated Circuit) bus communication functionality.
+//! This is a zetboxos embedded system specific module.
+
+module zetboxos::i2c;
+
+use core::option::Option;
+use core::result::Result;
+
+/// I2C bus number
+pub enum I2cBus {
+    /// I2C0
+    I2c0 = 0,
+    /// I2C1
+    I2c1 = 1,
+    /// I2C2
+    I2c2 = 2,
+}
+
+/// I2C configuration
+pub struct I2cConfig {
+    /// Clock speed (Hz)
+    pub clock_speed: u32,
+    /// Whether to use 10-bit address
+    pub use_10bit_address: bool,
+}
+
+impl I2cConfig {
+    /// Create standard mode configuration (100 kHz)
+    pub fn standard_mode() -> I2cConfig {
+        I2cConfig {
+            clock_speed: 100_000,
+            use_10bit_address: false,
+        }
+    }
+
+    /// Create fast mode configuration (400 kHz)
+    pub fn fast_mode() -> I2cConfig {
+        I2cConfig {
+            clock_speed: 400_000,
+            use_10bit_address: false,
+        }
+    }
+
+    /// Create fast mode plus configuration (1 MHz)
+    pub fn fast_mode_plus() -> I2cConfig {
+        I2cConfig {
+            clock_speed: 1_000_000,
+            use_10bit_address: false,
+        }
+    }
+
+    /// Create high speed mode configuration (3.4 MHz)
+    pub fn high_speed_mode() -> I2cConfig {
+        I2cConfig {
+            clock_speed: 3_400_000,
+            use_10bit_address: false,
+        }
+    }
+}
+
+/// I2C error type
+pub enum I2cError {
+    /// Initialization failed
+    InitFailed,
+    /// Bus busy
+    BusBusy,
+    /// Arbitration lost
+    ArbitrationLost,
+    /// No acknowledge (NACK)
+    NoAcknowledge,
+    /// Timeout
+    Timeout,
+    /// Bus error
+    BusError,
+    /// Overrun error
+    Overrun,
+    /// Invalid parameter
+    InvalidParam,
+}
+
+/// I2C device address
+pub struct I2cAddress {
+    /// 7-bit or 10-bit address
+    addr: u16,
+    /// Whether it is a 10-bit address
+    is_10bit: bool,
+}
+
+impl I2cAddress {
+    /// Create 7-bit address
+    pub fn new_7bit(addr: u8) -> Result<I2cAddress, I2cError> {
+        if addr > 0x7F {
+            Result::Err(I2cError::InvalidParam)
+        } else {
+            Result::Ok(I2cAddress {
+                addr: addr as u16,
+                is_10bit: false,
+            })
+        }
+    }
+
+    /// Create 10-bit address
+    pub fn new_10bit(addr: u16) -> Result<I2cAddress, I2cError> {
+        if addr > 0x3FF {
+            Result::Err(I2cError::InvalidParam)
+        } else {
+            Result::Ok(I2cAddress {
+                addr,
+                is_10bit: true,
+            })
+        }
+    }
+
+    /// Get address value
+    pub fn value(&self) -> u16 {
+        self.addr
+    }
+
+    /// Whether it is a 10-bit address
+    pub fn is_10bit(&self) -> bool {
+        self.is_10bit
+    }
+}
+
+/// I2C master device structure
+pub struct I2cMaster {
+    /// Bus number
+    bus: I2cBus,
+    /// Configuration
+    config: I2cConfig,
+}
+
+impl I2cMaster {
+    /// Initialize I2C master device
+    pub fn new(bus: I2cBus, config: I2cConfig) -> Result<I2cMaster, I2cError> {
+        unsafe {
+            if i2c_init_internal(bus as u32, &config) != 0 {
+                Result::Err(I2cError::InitFailed)
+            } else {
+                Result::Ok(I2cMaster { bus, config })
+            }
+        }
+    }
+
+    /// Initialize with default configuration
+    pub fn new_default(bus: I2cBus) -> Result<I2cMaster, I2cError> {
+        Self::new(bus, I2cConfig::standard_mode())
+    }
+
+    /// Write data to device
+    pub fn write(&self, addr: I2cAddress, data: &[u8]) -> Result<(), I2cError> {
+        unsafe {
+            let result = i2c_write_internal(
+                self.bus as u32,
+                addr.value(),
+                addr.is_10bit(),
+                data.as_ptr(),
+                data.len(),
+            );
+            
+            match result {
+                0 => Result::Ok(()),
+                1 => Result::Err(I2cError::BusBusy),
+                2 => Result::Err(I2cError::ArbitrationLost),
+                3 => Result::Err(I2cError::NoAcknowledge),
+                4 => Result::Err(I2cError::Timeout),
+                _ => Result::Err(I2cError::BusError),
+            }
+        }
+    }
+
+    /// Read data from device
+    pub fn read(&self, addr: I2cAddress, buf: &mut [u8]) -> Result<usize, I2cError> {
+        unsafe {
+            let result = i2c_read_internal(
+                self.bus as u32,
+                addr.value(),
+                addr.is_10bit(),
+                buf.as_mut_ptr(),
+                buf.len(),
+            );
+            
+            if result < 0 {
+                match -result {
+                    1 => Result::Err(I2cError::BusBusy),
+                    2 => Result::Err(I2cError::ArbitrationLost),
+                    3 => Result::Err(I2cError::NoAcknowledge),
+                    4 => Result::Err(I2cError::Timeout),
+                    _ => Result::Err(I2cError::BusError),
+                }
+            } else {
+                Result::Ok(result as usize)
+            }
+        }
+    }
+
+    /// Write then read (combined transfer)
+    pub fn write_read(
+        &self,
+        addr: I2cAddress,
+        write_data: &[u8],
+        read_buf: &mut [u8],
+    ) -> Result<usize, I2cError> {
+        unsafe {
+            let result = i2c_write_read_internal(
+                self.bus as u32,
+                addr.value(),
+                addr.is_10bit(),
+                write_data.as_ptr(),
+                write_data.len(),
+                read_buf.as_mut_ptr(),
+                read_buf.len(),
+            );
+            
+            if result < 0 {
+                match -result {
+                    1 => Result::Err(I2cError::BusBusy),
+                    2 => Result::Err(I2cError::ArbitrationLost),
+                    3 => Result::Err(I2cError::NoAcknowledge),
+                    4 => Result::Err(I2cError::Timeout),
+                    _ => Result::Err(I2cError::BusError),
+                }
+            } else {
+                Result::Ok(result as usize)
+            }
+        }
+    }
+
+    /// Write a byte to device register
+    pub fn write_reg(&self, addr: I2cAddress, reg: u8, value: u8) -> Result<(), I2cError> {
+        let data = [reg, value];
+        self.write(addr, &data)
+    }
+
+    /// Read a byte from device register
+    pub fn read_reg(&self, addr: I2cAddress, reg: u8) -> Result<u8, I2cError> {
+        let mut buf = [0u8; 1];
+        let _ = self.write_read(addr, &[reg], &mut buf)?;
+        Result::Ok(buf[0])
+    }
+
+    /// Read multiple bytes from device register
+    pub fn read_reg_bytes(
+        &self,
+        addr: I2cAddress,
+        reg: u8,
+        buf: &mut [u8],
+    ) -> Result<usize, I2cError> {
+        self.write_read(addr, &[reg], buf)
+    }
+
+    /// Scan devices on bus
+    pub fn scan(&self) -> Vec<u8> {
+        let mut found = Vec::new();
+        
+        for addr in 0x08..=0x77 {
+            if let Ok(_) = I2cAddress::new_7bit(addr) {
+                // Try sending empty data to detect if device exists
+                if self.ping(I2cAddress::new_7bit(addr).unwrap()).is_ok() {
+                    found.push(addr);
+                }
+            }
+        }
+        
+        found
+    }
+
+    /// Check if device exists
+    pub fn ping(&self, addr: I2cAddress) -> Result<(), I2cError> {
+        self.write(addr, &[])
+    }
+
+    /// Get bus number
+    pub fn bus(&self) -> I2cBus {
+        self.bus
+    }
+
+    /// Get configuration
+    pub fn config(&self) -> &I2cConfig {
+        &self.config
+    }
+
+    /// Close I2C
+    pub fn close(&self) -> Result<(), I2cError> {
+        unsafe {
+            if i2c_close_internal(self.bus as u32) != 0 {
+                Result::Err(I2cError::BusError)
+            } else {
+                Result::Ok(())
+            }
+        }
+    }
+}
+
+/// I2C device trait
+pub trait I2cDevice {
+    /// Get device address
+    fn address(&self) -> I2cAddress;
+    
+    /// Get I2C master device reference
+    fn i2c(&self) -> &I2cMaster;
+}
+
+/// Convenience function: write data to I2C device
+pub fn write(bus: I2cBus, addr: u8, data: &[u8]) -> Result<(), I2cError> {
+    let i2c = I2cMaster::new_default(bus)?;
+    i2c.write(I2cAddress::new_7bit(addr)?, data)
+}
+
+/// Convenience function: read data from I2C device
+pub fn read(bus: I2cBus, addr: u8, buf: &mut [u8]) -> Result<usize, I2cError> {
+    let i2c = I2cMaster::new_default(bus)?;
+    i2c.read(I2cAddress::new_7bit(addr)?, buf)
+}
+
+/// Convenience function: write data to I2C device register
+pub fn write_reg(bus: I2cBus, addr: u8, reg: u8, value: u8) -> Result<(), I2cError> {
+    let i2c = I2cMaster::new_default(bus)?;
+    i2c.write_reg(I2cAddress::new_7bit(addr)?, reg, value)
+}
+
+/// Convenience function: read data from I2C device register
+pub fn read_reg(bus: I2cBus, addr: u8, reg: u8) -> Result<u8, I2cError> {
+    let i2c = I2cMaster::new_default(bus)?;
+    i2c.read_reg(I2cAddress::new_7bit(addr)?, reg)
+}
+
+/// Internal function declarations (mapped to zetboxos syscalls)
+extern "builtin" fn i2c_init_internal(bus: u32, config: &I2cConfig) -> i32;
+extern "builtin" fn i2c_write_internal(
+    bus: u32,
+    addr: u16,
+    is_10bit: bool,
+    data: *const u8,
+    len: usize,
+) -> i32;
+extern "builtin" fn i2c_read_internal(
+    bus: u32,
+    addr: u16,
+    is_10bit: bool,
+    buf: *mut u8,
+    len: usize,
+) -> i32;
+extern "builtin" fn i2c_write_read_internal(
+    bus: u32,
+    addr: u16,
+    is_10bit: bool,
+    write_data: *const u8,
+    write_len: usize,
+    read_buf: *mut u8,
+    read_len: usize,
+) -> i32;
+extern "builtin" fn i2c_close_internal(bus: u32) -> i32;

@@ -1,0 +1,5 @@
+module hello;
+
+pub fn main() {
+    println("Hello, BoxLang!");
+}

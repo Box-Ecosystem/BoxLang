@@ -1,0 +1,63 @@
+//! core - BoxLang 核心库
+//!
+//! 这个模块提供了 BoxLang 的核心功能，可以在 no_std 环境下使用。
+//! 它包括 Option、Result、内存管理、切片操作等基础类型和函数。
+
+module core;
+
+// 导出子模块
+pub use core::option;
+pub use core::result;
+pub use core::mem;
+pub use core::slice;
+pub use core::str;
+
+// 重新导出常用类型
+pub use core::option::Option;
+pub use core::option::Some;
+pub use core::option::None;
+pub use core::result::Result;
+pub use core::result::Ok;
+pub use core::result::Err;
+pub use core::mem::Box;
+
+// 常用宏（如果 BoxLang 支持宏）
+/// panic 宏
+pub macro panic($msg:expr) {
+    {
+        std::io::eprintln($msg);
+        unsafe { core::intrinsics::abort(); }
+    }
+}
+
+/// assert 宏
+pub macro assert($cond:expr) {
+    {
+        if !$cond {
+            panic("assertion failed");
+        }
+    }
+}
+
+/// assert_eq 宏
+pub macro assert_eq($left:expr, $right:expr) {
+    {
+        if $left != $right {
+            panic("assertion failed: left != right");
+        }
+    }
+}
+
+/// todo 宏
+pub macro todo() {
+    {
+        panic("not yet implemented");
+    }
+}
+
+/// unreachable 宏
+pub macro unreachable() {
+    {
+        panic("unreachable code reached");
+    }
+}

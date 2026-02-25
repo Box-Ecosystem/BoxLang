@@ -1,0 +1,53 @@
+module pipeline_math;
+
+fn add(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+
+fn multiply_by(x: i32, factor: i32) -> i32 {
+    return x * factor;
+}
+
+fn absolute(x: i32) -> i32 {
+    if x < 0 {
+        return -x;
+    }
+    return x;
+}
+
+fn clamp(x: i32, min: i32, max: i32) -> i32 {
+    if x < min {
+        return min;
+    }
+    if x > max {
+        return max;
+    }
+    return x;
+}
+
+fn power_of_two(x: i32) -> i32 {
+    return x * x;
+}
+
+pub fn main() {
+    println("数学计算管道示例:");
+
+    let value1 = 5;
+    let result1 = value1 |> power_of_two |> absolute;
+    println("5 |> square |> abs = " + result1.to_string());
+
+    let value2 = -3;
+    let result2 = value2 |> absolute |> power_of_two;
+    println("(-3) |> abs |> square = " + result2.to_string());
+
+    let value3 = 15;
+    let result3 = value3 |> power_of_two;
+    let clamped = clamp(result3, 0, 100);
+    println("15 |> square |> clamp(0, 100) = " + clamped.to_string());
+
+    let result4 = 2 |> power_of_two |> power_of_two;
+    println("2 |> square |> square = " + result4.to_string());
+
+    let result5 = 4 |> power_of_two |> absolute;
+    println("4 |> square |> abs = " + result5.to_string());
+}

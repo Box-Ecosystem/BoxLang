@@ -1,0 +1,228 @@
+//! core::mem - 内存管理模块
+//!
+//! 提供内存分配、释放、交换、替换等核心内存操作功能。
+//! 这个模块在 no_std 环境下也可以使用。
+
+module core::mem;
+
+use core::result::Result;
+
+/// Box<T> - 堆分配的智能指针
+///
+/// Box<T> 在堆上分配内存，并在离开作用域时自动释放。
+/// 它提供了对堆分配数据的所有权管理。
+pub struct Box<T> {
+    /// 指向堆内存的指针
+    ptr: *mut T,
+}
+
+impl<T> Box<T> {
+    /// 在堆上分配一个新的值
+    pub fn new(value: T) -> Box<T> {
+        // 分配内存
+        let ptr = unsafe { malloc(size_of::<T>()) as *mut T };
+        
+        // 将值写入分配的内存
+        unsafe {
+            *ptr = value;
+        }
+        
+        Box { ptr }
+    }
+
+    /// 从原始指针创建 Box（不安全）
+    pub unsafe fn from_raw(ptr: *mut T) -> Box<T> {
+        Box { ptr }
+    }
+
+    /// 将 Box 转换为原始指针（不释放内存）
+    pub fn into_raw(self) -> *mut T {
+        let ptr = self.ptr;
+        // 防止调用 drop
+        core::mem::forget(self);
+        ptr
+    }
+
+    /// 获取指向数据的指针
+    pub fn as_ptr(&self) -> *const T {
+        self.ptr
+    }
+
+    /// 获取指向数据的可变指针
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        self.ptr
+    }
+
+    /// 获取数据的引用
+    pub fn as_ref(&self) -> &T {
+        unsafe { &*self.ptr }
+    }
+
+    /// 获取数据的可变引用
+    pub fn as_mut(&mut self) -> &mut T {
+        unsafe { &mut *self.ptr }
+    }
+}
+
+/// 为 Box<T> 实现 Deref，允许像引用一样使用
+impl<T> Deref for Box<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        self.as_ref()
+    }
+}
+
+/// 为 Box<T> 实现 DerefMut，允许可变解引用
+impl<T> DerefMut for Box<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.as_mut()
+    }
+}
+
+/// 当 Box 离开作用域时，释放内存
+impl<T> Drop for Box<T> {
+    fn drop(&mut self) {
+        if !self.ptr.is_null() {
+            unsafe {
+                // 先调用析构函数
+                core::ptr::drop_in_place(self.ptr);
+                // 然后释放内存
+                free(self.ptr as *mut u8);
+            }
+        }
+    }
+}
+
+/// 交换两个值的位置
+pub fn swap<T>(a: &mut T, b: &mut T) {
+    unsafe {
+        // 使用临时缓冲区交换
+        let temp = core::ptr::read(a);
+        core::ptr::write(a, core::ptr::read(b));
+        core::ptr::write(b, temp);
+    }
+}
+
+/// 用新值替换旧值，返回旧值
+pub fn replace<T>(dest: &mut T, src: T) -> T {
+    unsafe {
+        let result = core::ptr::read(dest);
+        core::ptr::write(dest, src);
+        result
+    }
+}
+
+/// 获取类型的对齐要求
+pub fn align_of<T>() -> usize {
+    core::intrinsics::align_of::<T>()
+}
+
+/// 获取类型的大小
+pub fn size_of<T>() -> usize {
+    core::intrinsics::size_of::<T>()
+}
+
+/// 获取值的大小
+pub fn size_of_val<T>(val: &T) -> usize {
+    size_of::<T>()
+}
+
+/// 获取值的对齐要求
+pub fn align_of_val<T>(val: &T) -> usize {
+    align_of::<T>()
+}
+
+/// 丢弃一个值（调用析构函数但不释放内存）
+pub fn drop<T>(_x: T) {
+    // 值会在函数结束时被丢弃
+}
+
+/// 忘记一个值（不调用析构函数）
+pub fn forget<T>(x: T) {
+    unsafe {
+        core::intrinsics::forget(x);
+    }
+}
+
+/// 检查两个引用是否指向同一内存位置
+pub fn ref_eq<T>(a: &T, b: &T) -> bool {
+    (a as *const T) == (b as *const T)
+}
+
+/// 内存对齐的分配
+pub unsafe fn alloc_aligned(size: usize, align: usize) -> *mut u8 {
+    // 使用 aligned_alloc 或平台特定的分配函数
+    aligned_alloc(align, size)
+}
+
+/// 释放对齐分配的内存
+pub unsafe fn dealloc_aligned(ptr: *mut u8, _size: usize, _align: usize) {
+    free(ptr);
+}
+
+/// 将值复制到新的堆分配位置
+pub fn clone_to_heap<T: Clone>(value: &T) -> Box<T> {
+    Box::new(value.clone())
+}
+
+/// 将切片复制到新的堆分配位置
+pub fn clone_slice_to_heap<T: Clone>(slice: &[T]) -> Box<[T]> {
+    let len = slice.len();
+    let size = size_of::<T>() * len;
+    let align = align_of::<T>();
+    
+    unsafe {
+        let ptr = alloc_aligned(size, align) as *mut T;
+        
+        for i in 0..len {
+            core::ptr::write(ptr.add(i), slice[i].clone());
+        }
+        
+        Box::from_raw(core::slice::from_raw_parts_mut(ptr, len) as *mut [T] as *mut T)
+    }
+}
+
+/// 内存屏障：防止编译器重排序
+pub fn barrier() {
+    unsafe {
+        core::intrinsics::memory_barrier();
+    }
+}
+
+/// 读内存屏障
+pub fn read_barrier() {
+    unsafe {
+        core::intrinsics::read_barrier();
+    }
+}
+
+/// 写内存屏障
+pub fn write_barrier() {
+    unsafe {
+        core::intrinsics::write_barrier();
+    }
+}
+
+/// 检查指针是否对齐
+pub fn is_aligned<T>(ptr: *const T) -> bool {
+    let align = align_of::<T>();
+    (ptr as usize) % align == 0
+}
+
+/// 将指针向上对齐到指定边界
+pub fn align_up(ptr: usize, align: usize) -> usize {
+    (ptr + align - 1) & !(align - 1)
+}
+
+/// 将指针向下对齐到指定边界
+pub fn align_down(ptr: usize, align: usize) -> usize {
+    ptr & !(align - 1)
+}
+
+/// 外部 C 函数声明
+extern "C" {
+    fn malloc(size: usize) -> *mut u8;
+    fn free(ptr: *mut u8);
+    fn aligned_alloc(align: usize, size: usize) -> *mut u8;
+}

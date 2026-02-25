@@ -1,0 +1,26 @@
+module variables;
+
+pub fn main() {
+    let immutable_var = 42;
+    println("不可变变量: ");
+    println(immutable_var);
+
+    let mut mutable_var = 100;
+    println("修改前: ");
+    println(mutable_var);
+    mutable_var = 200;
+    println("修改后: ");
+    println(mutable_var);
+
+    let explicit_type: i32 = 50;
+    println("显式类型注解: ");
+    println(explicit_type);
+
+    let float_var = 3.14;
+    println("浮点数: ");
+    println(float_var);
+
+    let bool_var = true;
+    println("布尔值: ");
+    println(bool_var);
+}

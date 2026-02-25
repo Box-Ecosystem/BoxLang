@@ -1,0 +1,328 @@
+//! zetboxos::gpio - GPIO control module
+//! 
+//! Provides control functionality for GPIO (General Purpose Input/Output) pins.
+//! This is a zetboxos embedded system specific module.
+
+module zetboxos::gpio;
+
+use core::option::Option;
+use core::result::Result;
+
+/// GPIO pin mode
+pub enum PinMode {
+    /// Input mode
+    Input,
+    /// Output mode
+    Output,
+    /// Input with pull-up mode
+    InputPullUp,
+    /// Input with pull-down mode
+    InputPullDown,
+    /// Open-drain output mode
+    OpenDrain,
+}
+
+/// GPIO level
+pub enum PinLevel {
+    /// Low level
+    Low = 0,
+    /// High level
+    High = 1,
+}
+
+/// GPIO error type
+pub enum GpioError {
+    /// Invalid pin number
+    InvalidPin,
+    /// Unsupported mode
+    InvalidMode,
+    /// Initialization failed
+    InitFailed,
+    /// Read failed
+    ReadFailed,
+    /// Write failed
+    WriteFailed,
+}
+
+/// GPIO pin structure
+pub struct Pin {
+    /// Pin number
+    number: u8,
+    /// Current mode
+    mode: PinMode,
+}
+
+impl Pin {
+    /// Create and initialize a new GPIO pin
+    pub fn new(pin: u8, mode: PinMode) -> Result<Pin, GpioError> {
+        unsafe {
+            if gpio_init_internal(pin, mode as u32) != 0 {
+                Result::Err(GpioError::InitFailed)
+            } else {
+                Result::Ok(Pin {
+                    number: pin,
+                    mode: mode,
+                })
+            }
+        }
+    }
+
+    /// Set pin mode
+    pub fn set_mode(&mut self, mode: PinMode) -> Result<(), GpioError> {
+        unsafe {
+            if gpio_set_mode_internal(self.number, mode as u32) != 0 {
+                Result::Err(GpioError::InvalidMode)
+            } else {
+                self.mode = mode;
+                Result::Ok(())
+            }
+        }
+    }
+
+    /// Set pin to high level
+    pub fn set_high(&self) -> Result<(), GpioError> {
+        self.write(PinLevel::High)
+    }
+
+    /// Set pin to low level
+    pub fn set_low(&self) -> Result<(), GpioError> {
+        self.write(PinLevel::Low)
+    }
+
+    /// Write level to pin
+    pub fn write(&self, level: PinLevel) -> Result<(), GpioError> {
+        unsafe {
+            if gpio_write_internal(self.number, level as u32) != 0 {
+                Result::Err(GpioError::WriteFailed)
+            } else {
+                Result::Ok(())
+            }
+        }
+    }
+
+    /// Read pin level
+    pub fn read(&self) -> Result<PinLevel, GpioError> {
+        unsafe {
+            let level = gpio_read_internal(self.number);
+            if level < 0 {
+                Result::Err(GpioError::ReadFailed)
+            } else if level == 0 {
+                Result::Ok(PinLevel::Low)
+            } else {
+                Result::Ok(PinLevel::High)
+            }
+        }
+    }
+
+    /// Toggle pin level
+    pub fn toggle(&self) -> Result<(), GpioError> {
+        match self.read()? {
+            PinLevel::Low => self.set_high(),
+            PinLevel::High => self.set_low(),
+        }
+    }
+
+    /// Get pin number
+    pub fn pin_number(&self) -> u8 {
+        self.number
+    }
+
+    /// Get current mode
+    pub fn mode(&self) -> PinMode {
+        self.mode
+    }
+}
+
+/// Initialize GPIO pin (convenience function)
+pub fn init(pin: u8, mode: PinMode) -> Result<Pin, GpioError> {
+    Pin::new(pin, mode)
+}
+
+/// Set pin to high level (convenience function)
+pub fn set_high(pin: u8) -> Result<(), GpioError> {
+    unsafe {
+        if gpio_write_internal(pin, 1) != 0 {
+            Result::Err(GpioError::WriteFailed)
+        } else {
+            Result::Ok(())
+        }
+    }
+}
+
+/// Set pin to low level (convenience function)
+pub fn set_low(pin: u8) -> Result<(), GpioError> {
+    unsafe {
+        if gpio_write_internal(pin, 0) != 0 {
+            Result::Err(GpioError::WriteFailed)
+        } else {
+            Result::Ok(())
+        }
+    }
+}
+
+/// Read pin level (convenience function)
+pub fn read(pin: u8) -> Result<PinLevel, GpioError> {
+    unsafe {
+        let level = gpio_read_internal(pin);
+        if level < 0 {
+            Result::Err(GpioError::ReadFailed)
+        } else if level == 0 {
+            Result::Ok(PinLevel::Low)
+        } else {
+            Result::Ok(PinLevel::High)
+        }
+    }
+}
+
+/// Toggle pin level (convenience function)
+pub fn toggle(pin: u8) -> Result<(), GpioError> {
+    match read(pin)? {
+        PinLevel::Low => set_high(pin),
+        PinLevel::High => set_low(pin),
+    }
+}
+
+/// Configure pin interrupt (if hardware supports)
+pub fn set_interrupt(pin: u8, trigger: InterruptTrigger, handler: fn()) -> Result<(), GpioError> {
+    unsafe {
+        if gpio_set_interrupt_internal(pin, trigger as u32, handler) != 0 {
+            Result::Err(GpioError::InitFailed)
+        } else {
+            Result::Ok(())
+        }
+    }
+}
+
+/// Disable pin interrupt
+pub fn disable_interrupt(pin: u8) -> Result<(), GpioError> {
+    unsafe {
+        if gpio_disable_interrupt_internal(pin) != 0 {
+            Result::Err(GpioError::InitFailed)
+        } else {
+            Result::Ok(())
+        }
+    }
+}
+
+/// Interrupt trigger mode
+pub enum InterruptTrigger {
+    /// Rising edge trigger
+    RisingEdge,
+    /// Falling edge trigger
+    FallingEdge,
+    /// Both edges trigger
+    BothEdges,
+    /// High level trigger
+    HighLevel,
+    /// Low level trigger
+    LowLevel,
+}
+
+/// LED control structure (common GPIO application)
+pub struct Led {
+    pin: Pin,
+}
+
+impl Led {
+    /// Create a new LED controller
+    pub fn new(pin_number: u8) -> Result<Led, GpioError> {
+        let pin = Pin::new(pin_number, PinMode::Output)?;
+        Result::Ok(Led { pin })
+    }
+
+    /// Turn on LED (set to high level)
+    pub fn on(&self) -> Result<(), GpioError> {
+        self.pin.set_high()
+    }
+
+    /// Turn off LED (set to low level)
+    pub fn off(&self) -> Result<(), GpioError> {
+        self.pin.set_low()
+    }
+
+    /// Toggle LED state
+    pub fn toggle(&self) -> Result<(), GpioError> {
+        self.pin.toggle()
+    }
+
+    /// Blink LED specified times
+    pub fn blink(&self, times: u32, delay_ms: u64) -> Result<(), GpioError> {
+        for _ in 0..times {
+            self.on()?;
+            sleep_ms(delay_ms);
+            self.off()?;
+            sleep_ms(delay_ms);
+        }
+        Result::Ok(())
+    }
+}
+
+/// Button input structure (common GPIO application)
+pub struct Button {
+    pin: Pin,
+}
+
+impl Button {
+    /// Create a new button input
+    pub fn new(pin_number: u8, pull: PullMode) -> Result<Button, GpioError> {
+        let mode = match pull {
+            PullMode::Up => PinMode::InputPullUp,
+            PullMode::Down => PinMode::InputPullDown,
+            PullMode::None => PinMode::Input,
+        };
+        let pin = Pin::new(pin_number, mode)?;
+        Result::Ok(Button { pin })
+    }
+
+    /// Check if button is pressed (assuming pressed is low level)
+    pub fn is_pressed(&self) -> Result<bool, GpioError> {
+        match self.pin.read()? {
+            PinLevel::Low => Result::Ok(true),
+            PinLevel::High => Result::Ok(false),
+        }
+    }
+
+    /// Check if button is released
+    pub fn is_released(&self) -> Result<bool, GpioError> {
+        match self.pin.read()? {
+            PinLevel::High => Result::Ok(true),
+            PinLevel::Low => Result::Ok(false),
+        }
+    }
+
+    /// Wait for button press
+    pub fn wait_for_press(&self) -> Result<(), GpioError> {
+        while !self.is_pressed()? {
+            // Simple debounce delay
+            sleep_ms(10);
+        }
+        Result::Ok(())
+    }
+
+    /// Wait for button release
+    pub fn wait_for_release(&self) -> Result<(), GpioError> {
+        while !self.is_released()? {
+            sleep_ms(10);
+        }
+        Result::Ok(())
+    }
+}
+
+/// Pull-up/pull-down mode
+pub enum PullMode {
+    /// Pull-up
+    Up,
+    /// Pull-down
+    Down,
+    /// None
+    None,
+}
+
+/// Internal function declarations (mapped to zetboxos syscalls)
+extern "builtin" fn gpio_init_internal(pin: u8, mode: u32) -> i32;
+extern "builtin" fn gpio_set_mode_internal(pin: u8, mode: u32) -> i32;
+extern "builtin" fn gpio_write_internal(pin: u8, level: u32) -> i32;
+extern "builtin" fn gpio_read_internal(pin: u8) -> i32;
+extern "builtin" fn gpio_set_interrupt_internal(pin: u8, trigger: u32, handler: fn()) -> i32;
+extern "builtin" fn gpio_disable_interrupt_internal(pin: u8) -> i32;
+extern "builtin" fn sleep_ms(ms: u64);

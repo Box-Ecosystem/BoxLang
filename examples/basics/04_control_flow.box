@@ -1,0 +1,35 @@
+module control_flow;
+
+pub fn main() {
+    let x = 15;
+
+    if x > 10 {
+        println("x 大于 10");
+    } else if x > 5 {
+        println("x 大于 5 但小于等于 10");
+    } else {
+        println("x 小于等于 5");
+    }
+
+    println("while 循环:");
+    let mut i = 0;
+    while i < 5 {
+        println("i = ");
+        println(i);
+        i = i + 1;
+    }
+
+    println("for 循环 (0..5):");
+    for j in 0..5 {
+        println("j = ");
+        println(j);
+    }
+
+    println("for 循环计算累加和:");
+    let mut sum = 0;
+    for k in 1..11 {
+        sum = sum + k;
+    }
+    println("1 到 10 的和 = ");
+    println(sum);
+}

@@ -1,0 +1,211 @@
+//! Result<T, E> - 结果类型
+//!
+//! Result<T, E> 用于表示可能失败的操作的结果。
+//! 它有两个变体：
+//! - Ok(T): 操作成功，包含结果值 T
+//! - Err(E): 操作失败，包含错误信息 E
+
+module core::result;
+
+/// Result<T, E> 枚举定义
+pub enum Result<T, E> {
+    /// 操作成功，包含结果值
+    Ok(T),
+    /// 操作失败，包含错误信息
+    Err(E),
+}
+
+/// Result<T, E> 的方法实现
+impl<T, E> Result<T, E> {
+    /// 检查 Result 是否为 Ok
+    pub fn is_ok(&self) -> bool {
+        match self {
+            Result::Ok(_) => true,
+            Result::Err(_) => false,
+        }
+    }
+
+    /// 检查 Result 是否为 Err
+    pub fn is_err(&self) -> bool {
+        match self {
+            Result::Ok(_) => false,
+            Result::Err(_) => true,
+        }
+    }
+
+    /// 获取 Result 中的 Ok 值，如果是 Err 则 panic
+    pub fn unwrap(self) -> T {
+        match self {
+            Result::Ok(val) => val,
+            Result::Err(_) => panic("called `Result::unwrap()` on an `Err` value"),
+        }
+    }
+
+    /// 获取 Result 中的 Err 值，如果是 Ok 则 panic
+    pub fn unwrap_err(self) -> E {
+        match self {
+            Result::Ok(_) => panic("called `Result::unwrap_err()` on an `Ok` value"),
+            Result::Err(err) => err,
+        }
+    }
+
+    /// 获取 Result 中的 Ok 值，如果是 Err 则返回默认值
+    pub fn unwrap_or(self, default: T) -> T {
+        match self {
+            Result::Ok(val) => val,
+            Result::Err(_) => default,
+        }
+    }
+
+    /// 获取 Result 中的 Ok 值，如果是 Err 则通过函数计算默认值
+    pub fn unwrap_or_else<F>(self, f: F) -> T
+    where
+        F: FnOnce(E) -> T,
+    {
+        match self {
+            Result::Ok(val) => val,
+            Result::Err(err) => f(err),
+        }
+    }
+
+    /// 获取 Result 中的 Ok 引用
+    pub fn as_ref(&self) -> Result<&T, &E> {
+        match self {
+            Result::Ok(ref val) => Result::Ok(val),
+            Result::Err(ref err) => Result::Err(err),
+        }
+    }
+
+    /// 获取 Result 中的 Ok 可变引用
+    pub fn as_mut(&mut self) -> Result<&mut T, &mut E> {
+        match self {
+            Result::Ok(ref mut val) => Result::Ok(val),
+            Result::Err(ref mut err) => Result::Err(err),
+        }
+    }
+
+    /// 如果 Result 是 Ok，则对其中的值应用函数 f，返回新的 Result
+    pub fn map<U, F>(self, f: F) -> Result<U, E>
+    where
+        F: FnOnce(T) -> U,
+    {
+        match self {
+            Result::Ok(val) => Result::Ok(f(val)),
+            Result::Err(err) => Result::Err(err),
+        }
+    }
+
+    /// 如果 Result 是 Ok，则对其中的值应用函数 f，否则返回默认值
+    pub fn map_or<U, F>(self, default: U, f: F) -> U
+    where
+        F: FnOnce(T) -> U,
+    {
+        match self {
+            Result::Ok(val) => f(val),
+            Result::Err(_) => default,
+        }
+    }
+
+    /// 如果 Result 是 Ok，则对其中的值应用函数 f，否则计算默认值
+    pub fn map_or_else<U, D, F>(self, default: D, f: F) -> U
+    where
+        D: FnOnce(E) -> U,
+        F: FnOnce(T) -> U,
+    {
+        match self {
+            Result::Ok(val) => f(val),
+            Result::Err(err) => default(err),
+        }
+    }
+
+    /// 如果 Result 是 Err，则对其中的错误应用函数 f，返回新的 Result
+    pub fn map_err<F, O>(self, f: F) -> Result<T, O>
+    where
+        F: FnOnce(E) -> O,
+    {
+        match self {
+            Result::Ok(val) => Result::Ok(val),
+            Result::Err(err) => Result::Err(f(err)),
+        }
+    }
+
+    /// 如果 Result 是 Ok，则对其中的值应用返回 Result 的函数 f
+    pub fn and_then<U, F>(self, f: F) -> Result<U, E>
+    where
+        F: FnOnce(T) -> Result<U, E>,
+    {
+        match self {
+            Result::Ok(val) => f(val),
+            Result::Err(err) => Result::Err(err),
+        }
+    }
+
+    /// 如果 Result 是 Err，则返回另一个 Result
+    pub fn or<F>(self, other: Result<T, F>) -> Result<T, F> {
+        match self {
+            Result::Ok(val) => Result::Ok(val),
+            Result::Err(_) => other,
+        }
+    }
+
+    /// 如果 Result 是 Err，则通过函数计算另一个 Result
+    pub fn or_else<F, O>(self, f: F) -> Result<T, O>
+    where
+        F: FnOnce(E) -> Result<T, O>,
+    {
+        match self {
+            Result::Ok(val) => Result::Ok(val),
+            Result::Err(err) => f(err),
+        }
+    }
+
+    /// 获取 Result 中的 Ok 值，如果是 Err 则 panic 并显示自定义消息
+    pub fn expect(self, msg: &str) -> T {
+        match self {
+            Result::Ok(val) => val,
+            Result::Err(_) => panic(msg),
+        }
+    }
+
+    /// 获取 Result 中的 Err 值，如果是 Ok 则 panic 并显示自定义消息
+    pub fn expect_err(self, msg: &str) -> E {
+        match self {
+            Result::Ok(_) => panic(msg),
+            Result::Err(err) => err,
+        }
+    }
+
+    /// 如果 Result 是 Ok，则对其中的值应用函数 f（副作用）
+    pub fn inspect<F>(self, f: F) -> Result<T, E>
+    where
+        F: FnOnce(&T),
+    {
+        match &self {
+            Result::Ok(val) => f(val),
+            Result::Err(_) => {},
+        }
+        self
+    }
+
+    /// 如果 Result 是 Err，则对其中的错误应用函数 f（副作用）
+    pub fn inspect_err<F>(self, f: F) -> Result<T, E>
+    where
+        F: FnOnce(&E),
+    {
+        match &self {
+            Result::Ok(_) => {},
+            Result::Err(err) => f(err),
+        }
+        self
+    }
+}
+
+/// 创建 Ok 值的便捷函数
+pub fn ok<T, E>(value: T) -> Result<T, E> {
+    Result::Ok(value)
+}
+
+/// 创建 Err 值的便捷函数
+pub fn err<T, E>(error: E) -> Result<T, E> {
+    Result::Err(error)
+}

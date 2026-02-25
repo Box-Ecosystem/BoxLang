@@ -1,0 +1,398 @@
+//! core::slice - 切片操作模块
+//!
+//! 提供对切片类型 [T] 的各种操作方法。
+//! 切片是动态大小的连续内存视图。
+
+module core::slice;
+
+use core::option::Option;
+use core::result::Result;
+use core::mem;
+
+/// 为切片类型 [T] 提供方法
+/// 注意：在 BoxLang 中，切片通过 &[T] 和 &mut [T] 访问
+
+/// 获取切片的长度
+pub fn len<T>(slice: &[T]) -> usize {
+    // 内部实现：切片在内存中表示为 (ptr, length)
+    // 这里通过内置函数获取长度
+    unsafe { slice_len_internal(slice) }
+}
+
+/// 检查切片是否为空
+pub fn is_empty<T>(slice: &[T]) -> bool {
+    len(slice) == 0
+}
+
+/// 获取切片的第一个元素
+pub fn first<T>(slice: &[T]) -> Option<&T> {
+    if is_empty(slice) {
+        Option::None
+    } else {
+        Option::Some(&slice[0])
+    }
+}
+
+/// 获取切片的第一个元素的可变引用
+pub fn first_mut<T>(slice: &mut [T]) -> Option<&mut T> {
+    if is_empty(slice) {
+        Option::None
+    } else {
+        Option::Some(&mut slice[0])
+    }
+}
+
+/// 获取切片的最后一个元素
+pub fn last<T>(slice: &[T]) -> Option<&T> {
+    let length = len(slice);
+    if length == 0 {
+        Option::None
+    } else {
+        Option::Some(&slice[length - 1])
+    }
+}
+
+/// 获取切片的最后一个元素的可变引用
+pub fn last_mut<T>(slice: &mut [T]) -> Option<&mut T> {
+    let length = len(slice);
+    if length == 0 {
+        Option::None
+    } else {
+        Option::Some(&mut slice[length - 1])
+    }
+}
+
+/// 安全地获取切片中的元素
+pub fn get<T>(slice: &[T], index: usize) -> Option<&T> {
+    if index < len(slice) {
+        Option::Some(&slice[index])
+    } else {
+        Option::None
+    }
+}
+
+/// 安全地获取切片中的元素的可变引用
+pub fn get_mut<T>(slice: &mut [T], index: usize) -> Option<&mut T> {
+    if index < len(slice) {
+        Option::Some(&mut slice[index])
+    } else {
+        Option::None
+    }
+}
+
+/// 获取切片的子切片
+pub fn subslice<T>(slice: &[T], start: usize, end: usize) -> Option<&[T]> {
+    let length = len(slice);
+    if start > end || end > length {
+        Option::None
+    } else {
+        Option::Some(slice_range_internal(slice, start, end))
+    }
+}
+
+/// 获取切片的可变子切片
+pub fn subslice_mut<T>(slice: &mut [T], start: usize, end: usize) -> Option<&mut [T]> {
+    let length = len(slice);
+    if start > end || end > length {
+        Option::None
+    } else {
+        Option::Some(slice_range_mut_internal(slice, start, end))
+    }
+}
+
+/// 将切片分割为两个部分（在指定索引处）
+pub fn split_at<T>(slice: &[T], mid: usize) -> (&[T], &[T]) {
+    let length = len(slice);
+    if mid > length {
+        panic("split index out of bounds");
+    }
+    (
+        slice_range_internal(slice, 0, mid),
+        slice_range_internal(slice, mid, length)
+    )
+}
+
+/// 将可变切片分割为两个可变部分
+pub fn split_at_mut<T>(slice: &mut [T], mid: usize) -> (&mut [T], &mut [T]) {
+    let length = len(slice);
+    if mid > length {
+        panic("split index out of bounds");
+    }
+    (
+        slice_range_mut_internal(slice, 0, mid),
+        slice_range_mut_internal(slice, mid, length)
+    )
+}
+
+/// 交换切片中的两个元素
+pub fn swap<T>(slice: &mut [T], i: usize, j: usize) {
+    let length = len(slice);
+    if i >= length || j >= length {
+        panic("swap index out of bounds");
+    }
+    unsafe {
+        core::ptr::swap(&mut slice[i], &mut slice[j]);
+    }
+}
+
+/// 反转切片中的元素顺序
+pub fn reverse<T>(slice: &mut [T]) {
+    let length = len(slice);
+    let half = length / 2;
+    for i in 0..half {
+        swap(slice, i, length - 1 - i);
+    }
+}
+
+/// 在切片中线性查找元素
+pub fn find<T: PartialEq>(slice: &[T], value: &T) -> Option<usize> {
+    for i in 0..len(slice) {
+        if &slice[i] == value {
+            return Option::Some(i);
+        }
+    }
+    Option::None
+}
+
+/// 检查切片是否包含某个元素
+pub fn contains<T: PartialEq>(slice: &[T], value: &T) -> bool {
+    find(slice, value).is_some()
+}
+
+/// 计算切片中满足条件的元素数量
+pub fn count_if<T, F>(slice: &[T], predicate: F) -> usize
+where
+    F: Fn(&T) -> bool,
+{
+    let mut count = 0;
+    for i in 0..len(slice) {
+        if predicate(&slice[i]) {
+            count += 1;
+        }
+    }
+    count
+}
+
+/// 查找切片中满足条件的第一个元素的索引
+pub fn position<T, F>(slice: &[T], predicate: F) -> Option<usize>
+where
+    F: Fn(&T) -> bool,
+{
+    for i in 0..len(slice) {
+        if predicate(&slice[i]) {
+            return Option::Some(i);
+        }
+    }
+    Option::None
+}
+
+/// 查找切片中满足条件的最后一个元素的索引
+pub fn rposition<T, F>(slice: &[T], predicate: F) -> Option<usize>
+where
+    F: Fn(&T) -> bool,
+{
+    let length = len(slice);
+    for i in (0..length).rev() {
+        if predicate(&slice[i]) {
+            return Option::Some(i);
+        }
+    }
+    Option::None
+}
+
+/// 检查切片中所有元素是否都满足条件
+pub fn all<T, F>(slice: &[T], predicate: F) -> bool
+where
+    F: Fn(&T) -> bool,
+{
+    for i in 0..len(slice) {
+        if !predicate(&slice[i]) {
+            return false;
+        }
+    }
+    true
+}
+
+/// 检查切片中是否有任何元素满足条件
+pub fn any<T, F>(slice: &[T], predicate: F) -> bool
+where
+    F: Fn(&T) -> bool,
+{
+    for i in 0..len(slice) {
+        if predicate(&slice[i]) {
+            return true;
+        }
+    }
+    false
+}
+
+/// 将切片复制到新的 Vec（如果 BoxLang 支持 Vec）
+/// 或者复制到堆分配的 Box<[T]>
+pub fn to_owned<T: Clone>(slice: &[T]) -> Box<[T]> {
+    mem::clone_slice_to_heap(slice)
+}
+
+/// 填充切片的所有元素为指定值
+pub fn fill<T: Clone>(slice: &mut [T], value: T) {
+    for i in 0..len(slice) {
+        slice[i] = value.clone();
+    }
+}
+
+/// 使用函数填充切片
+pub fn fill_with<T, F>(slice: &mut [T], f: F)
+where
+    F: Fn() -> T,
+{
+    for i in 0..len(slice) {
+        slice[i] = f();
+    }
+}
+
+/// 对切片的每个元素应用函数（副作用）
+pub fn for_each<T, F>(slice: &[T], f: F)
+where
+    F: Fn(&T),
+{
+    for i in 0..len(slice) {
+        f(&slice[i]);
+    }
+}
+
+/// 对切片的每个可变元素应用函数
+pub fn for_each_mut<T, F>(slice: &mut [T], f: F)
+where
+    F: Fn(&mut T),
+{
+    for i in 0..len(slice) {
+        f(&mut slice[i]);
+    }
+}
+
+/// 将切片映射到新切片（需要预先分配）
+pub fn map<T, U, F>(slice: &[T], f: F) -> Box<[U]>
+where
+    F: Fn(&T) -> U,
+{
+    let length = len(slice);
+    unsafe {
+        let ptr = mem::alloc_aligned(
+            mem::size_of::<U>() * length,
+            mem::align_of::<U>()
+        ) as *mut U;
+        
+        for i in 0..length {
+            core::ptr::write(ptr.add(i), f(&slice[i]));
+        }
+        
+        Box::from_raw(core::slice::from_raw_parts_mut(ptr, length) as *mut [U] as *mut U)
+    }
+}
+
+/// 对切片进行原地排序（简单插入排序，适用于小切片）
+pub fn sort<T: PartialOrd>(slice: &mut [T]) {
+    let length = len(slice);
+    for i in 1..length {
+        let mut j = i;
+        while j > 0 && slice[j - 1] > slice[j] {
+            swap(slice, j - 1, j);
+            j -= 1;
+        }
+    }
+}
+
+/// 对切片进行原地排序，使用自定义比较函数
+pub fn sort_by<T, F>(slice: &mut [T], compare: F)
+where
+    F: Fn(&T, &T) -> bool, // 如果第一个参数应该排在第二个之前，返回 true
+{
+    let length = len(slice);
+    for i in 1..length {
+        let mut j = i;
+        while j > 0 && compare(&slice[j], &slice[j - 1]) {
+            swap(slice, j - 1, j);
+            j -= 1;
+        }
+    }
+}
+
+/// 对切片进行二分查找（要求切片已排序）
+pub fn binary_search<T: PartialOrd>(slice: &[T], value: &T) -> Result<usize, usize> {
+    let mut left = 0;
+    let mut right = len(slice);
+    
+    while left < right {
+        let mid = left + (right - left) / 2;
+        if &slice[mid] < value {
+            left = mid + 1;
+        } else if &slice[mid] > value {
+            right = mid;
+        } else {
+            return Result::Ok(mid);
+        }
+    }
+    
+    Result::Err(left) // 返回应该插入的位置
+}
+
+/// 旋转切片：将前 k 个元素移到末尾
+pub fn rotate_left<T>(slice: &mut [T], k: usize) {
+    let length = len(slice);
+    if length == 0 {
+        return;
+    }
+    let k = k % length;
+    if k == 0 {
+        return;
+    }
+    
+    reverse(slice_range_mut_internal(slice, 0, k));
+    reverse(slice_range_mut_internal(slice, k, length));
+    reverse(slice);
+}
+
+/// 旋转切片：将后 k 个元素移到开头
+pub fn rotate_right<T>(slice: &mut [T], k: usize) {
+    let length = len(slice);
+    if length == 0 {
+        return;
+    }
+    let k = k % length;
+    if k == 0 {
+        return;
+    }
+    
+    rotate_left(slice, length - k);
+}
+
+/// 将两个切片按顺序连接起来
+pub fn concat<T: Clone>(a: &[T], b: &[T]) -> Box<[T]> {
+    let len_a = len(a);
+    let len_b = len(b);
+    let total = len_a + len_b;
+    
+    unsafe {
+        let ptr = mem::alloc_aligned(
+            mem::size_of::<T>() * total,
+            mem::align_of::<T>()
+        ) as *mut T;
+        
+        for i in 0..len_a {
+            core::ptr::write(ptr.add(i), a[i].clone());
+        }
+        for i in 0..len_b {
+            core::ptr::write(ptr.add(len_a + i), b[i].clone());
+        }
+        
+        Box::from_raw(core::slice::from_raw_parts_mut(ptr, total) as *mut [T] as *mut T)
+    }
+}
+
+/// 内部函数：获取切片长度
+extern "builtin" fn slice_len_internal<T>(slice: &[T]) -> usize;
+
+/// 内部函数：获取切片范围
+extern "builtin" fn slice_range_internal<T>(slice: &[T], start: usize, end: usize) -> &[T];
+
+/// 内部函数：获取可变切片范围
+extern "builtin" fn slice_range_mut_internal<T>(slice: &mut [T], start: usize, end: usize) -> &mut [T];

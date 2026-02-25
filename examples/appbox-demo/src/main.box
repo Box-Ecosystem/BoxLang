@@ -1,0 +1,35 @@
+module appbox_demo;
+
+/// Main entry point for AppBox Demo application
+pub fn main() {
+    println("========================================");
+    println("  Welcome to AppBox Demo!");
+    println("========================================");
+    println("");
+    println("This application demonstrates:");
+    println("  - BoxLang syntax and features");
+    println("  - AppBox packaging integration");
+    println("  - Cross-platform compatibility");
+    println("");
+    
+    // Demonstrate basic arithmetic
+    let x = 42;
+    let y = 13;
+    let sum = x + y;
+    println("Basic arithmetic:");
+    print("  ");
+    print(x);
+    print(" + ");
+    print(y);
+    print(" = ");
+    println(sum);
+    println("");
+    
+    // Demonstrate string operations
+    let greeting = "Hello from BoxLang!";
+    print("Message: ");
+    println(greeting);
+    println("");
+    
+    println("AppBox Demo completed successfully!");
+}

@@ -1,0 +1,533 @@
+//! std::time - 时间模块
+//!
+//! 提供时间、日期、延时等功能。
+
+module std::time;
+
+use core::option::Option;
+use core::result::Result;
+
+// ============================================================================
+// 时间常量
+// ============================================================================
+
+/// 每秒的纳秒数
+pub const NANOS_PER_SEC: u64 = 1_000_000_000;
+
+/// 每秒的微秒数
+pub const MICROS_PER_SEC: u64 = 1_000_000;
+
+/// 每秒的毫秒数
+pub const MILLIS_PER_SEC: u64 = 1_000;
+
+/// 每分钟的秒数
+pub const SECS_PER_MIN: u64 = 60;
+
+/// 每小时的秒数
+pub const SECS_PER_HOUR: u64 = 3600;
+
+/// 每天的秒数
+pub const SECS_PER_DAY: u64 = 86400;
+
+// ============================================================================
+// Duration - 时间间隔
+// ============================================================================
+
+/// Duration 表示两个时间点之间的时间间隔
+pub struct Duration {
+    /// 秒数
+    secs: u64,
+    /// 纳秒数（0 到 999,999,999）
+    nanos: u32,
+}
+
+impl Duration {
+    /// 从秒数创建 Duration
+    pub fn from_secs(secs: u64) -> Duration {
+        Duration {
+            secs: secs,
+            nanos: 0,
+        }
+    }
+
+    /// 从毫秒数创建 Duration
+    pub fn from_millis(millis: u64) -> Duration {
+        Duration {
+            secs: millis / MILLIS_PER_SEC,
+            nanos: ((millis % MILLIS_PER_SEC) * 1_000_000) as u32,
+        }
+    }
+
+    /// 从微秒数创建 Duration
+    pub fn from_micros(micros: u64) -> Duration {
+        Duration {
+            secs: micros / MICROS_PER_SEC,
+            nanos: ((micros % MICROS_PER_SEC) * 1_000) as u32,
+        }
+    }
+
+    /// 从纳秒数创建 Duration
+    pub fn from_nanos(nanos: u64) -> Duration {
+        Duration {
+            secs: nanos / NANOS_PER_SEC,
+            nanos: (nanos % NANOS_PER_SEC) as u32,
+        }
+    }
+
+    /// 创建零长度的 Duration
+    pub fn zero() -> Duration {
+        Duration {
+            secs: 0,
+            nanos: 0,
+        }
+    }
+
+    /// 获取秒数部分
+    pub fn as_secs(&self) -> u64 {
+        self.secs
+    }
+
+    /// 获取毫秒数（可能溢出）
+    pub fn as_millis(&self) -> u128 {
+        (self.secs as u128 * MILLIS_PER_SEC as u128) + (self.nanos as u128 / 1_000_000)
+    }
+
+    /// 获取微秒数（可能溢出）
+    pub fn as_micros(&self) -> u128 {
+        (self.secs as u128 * MICROS_PER_SEC as u128) + (self.nanos as u128 / 1_000)
+    }
+
+    /// 获取纳秒数（可能溢出）
+    pub fn as_nanos(&self) -> u128 {
+        (self.secs as u128 * NANOS_PER_SEC as u128) + self.nanos as u128
+    }
+
+    /// 获取秒数的浮点表示
+    pub fn as_secs_f64(&self) -> f64 {
+        self.secs as f64 + (self.nanos as f64 / NANOS_PER_SEC as f64)
+    }
+
+    /// 检查是否为零
+    pub fn is_zero(&self) -> bool {
+        self.secs == 0 && self.nanos == 0
+    }
+
+    /// 加法
+    pub fn add(self, other: Duration) -> Duration {
+        let mut secs = self.secs + other.secs;
+        let mut nanos = self.nanos + other.nanos;
+        
+        if nanos >= NANOS_PER_SEC as u32 {
+            secs += 1;
+            nanos -= NANOS_PER_SEC as u32;
+        }
+        
+        Duration { secs, nanos }
+    }
+
+    /// 减法
+    pub fn sub(self, other: Duration) -> Option<Duration> {
+        if self < other {
+            Option::None
+        } else {
+            let mut secs = self.secs - other.secs;
+            let mut nanos = if self.nanos >= other.nanos {
+                self.nanos - other.nanos
+            } else {
+                secs -= 1;
+                self.nanos + NANOS_PER_SEC as u32 - other.nanos
+            };
+            
+            Option::Some(Duration { secs, nanos })
+        }
+    }
+
+    /// 乘法
+    pub fn mul(self, factor: u32) -> Duration {
+        let total_nanos = self.as_nanos() * factor as u128;
+        Duration {
+            secs: (total_nanos / NANOS_PER_SEC as u128) as u64,
+            nanos: (total_nanos % NANOS_PER_SEC as u128) as u32,
+        }
+    }
+
+    /// 除法
+    pub fn div(self, divisor: u32) -> Duration {
+        let total_nanos = self.as_nanos() / divisor as u128;
+        Duration {
+            secs: (total_nanos / NANOS_PER_SEC as u128) as u64,
+            nanos: (total_nanos % NANOS_PER_SEC as u128) as u32,
+        }
+    }
+}
+
+/// 比较两个 Duration
+impl PartialEq for Duration {
+    fn eq(&self, other: &Duration) -> bool {
+        self.secs == other.secs && self.nanos == other.nanos
+    }
+}
+
+impl PartialOrd for Duration {
+    fn partial_cmp(&self, other: &Duration) -> Option<Ordering> {
+        if self.secs < other.secs {
+            Option::Some(Ordering::Less)
+        } else if self.secs > other.secs {
+            Option::Some(Ordering::Greater)
+        } else if self.nanos < other.nanos {
+            Option::Some(Ordering::Less)
+        } else if self.nanos > other.nanos {
+            Option::Some(Ordering::Greater)
+        } else {
+            Option::Some(Ordering::Equal)
+        }
+    }
+}
+
+// ============================================================================
+// Instant - 时间点
+// ============================================================================
+
+/// Instant 表示一个时间点，用于测量时间间隔
+pub struct Instant {
+    /// 从某个固定时间点开始的纳秒数
+    nanos: u64,
+}
+
+impl Instant {
+    /// 获取当前时间点
+    pub fn now() -> Instant {
+        Instant {
+            nanos: unsafe { get_time_nanos_internal() },
+        }
+    }
+
+    /// 计算到另一个时间点的间隔
+    pub fn duration_since(&self, earlier: Instant) -> Duration {
+        let nanos = if self.nanos >= earlier.nanos {
+            self.nanos - earlier.nanos
+        } else {
+            0 // 时间倒流，返回 0
+        };
+        
+        Duration {
+            secs: nanos / NANOS_PER_SEC,
+            nanos: (nanos % NANOS_PER_SEC) as u32,
+        }
+    }
+
+    /// 计算从该时间点开始的间隔
+    pub fn elapsed(&self) -> Duration {
+        Instant::now().duration_since(*self)
+    }
+
+    /// 加上一个 Duration
+    pub fn add_duration(&self, duration: Duration) -> Instant {
+        Instant {
+            nanos: self.nanos + duration.as_nanos() as u64,
+        }
+    }
+
+    /// 检查是否早于另一个时间点
+    pub fn is_before(&self, other: Instant) -> bool {
+        self.nanos < other.nanos
+    }
+
+    /// 检查是否晚于另一个时间点
+    pub fn is_after(&self, other: Instant) -> bool {
+        self.nanos > other.nanos
+    }
+}
+
+// ============================================================================
+// SystemTime - 系统时间
+// ============================================================================
+
+/// SystemTime 表示系统时间（Unix 时间戳）
+pub struct SystemTime {
+    /// 从 Unix 纪元（1970-01-01 00:00:00 UTC）开始的秒数
+    secs: i64,
+    /// 纳秒数（0 到 999,999,999）
+    nanos: u32,
+}
+
+/// SystemTime 错误类型
+pub enum SystemTimeError {
+    /// 时间早于 Unix 纪元
+    BeforeEpoch,
+    /// 时间溢出
+    Overflow,
+}
+
+impl SystemTime {
+    /// 获取当前系统时间
+    pub fn now() -> SystemTime {
+        unsafe {
+            let (secs, nanos) = get_system_time_internal();
+            SystemTime { secs, nanos }
+        }
+    }
+
+    /// 从 Unix 时间戳创建
+    pub fn from_unix_timestamp(secs: i64) -> SystemTime {
+        SystemTime {
+            secs: secs,
+            nanos: 0,
+        }
+    }
+
+    /// 获取 Unix 时间戳（秒）
+    pub fn unix_timestamp(&self) -> i64 {
+        self.secs
+    }
+
+    /// 获取持续时间间隔
+    pub fn duration_since(&self, earlier: SystemTime) -> Result<Duration, SystemTimeError> {
+        if self.secs < earlier.secs {
+            Result::Err(SystemTimeError::BeforeEpoch)
+        } else {
+            let secs = (self.secs - earlier.secs) as u64;
+            let nanos = if self.nanos >= earlier.nanos {
+                self.nanos - earlier.nanos
+            } else {
+                secs - 1
+                NANOS_PER_SEC as u32 - earlier.nanos + self.nanos
+            };
+            
+            Result::Ok(Duration { secs, nanos })
+        }
+    }
+
+    /// 加上 Duration
+    pub fn add(&self, duration: Duration) -> Result<SystemTime, SystemTimeError> {
+        let secs = self.secs + duration.as_secs() as i64;
+        let nanos = self.nanos + duration.nanos;
+        
+        if nanos >= NANOS_PER_SEC as u32 {
+            Result::Ok(SystemTime {
+                secs: secs + 1,
+                nanos: nanos - NANOS_PER_SEC as u32,
+            })
+        } else {
+            Result::Ok(SystemTime { secs, nanos })
+        }
+    }
+
+    /// 减去 Duration
+    pub fn sub(&self, duration: Duration) -> Result<SystemTime, SystemTimeError> {
+        let duration_secs = duration.as_secs() as i64;
+        
+        if self.secs < duration_secs {
+            Result::Err(SystemTimeError::BeforeEpoch)
+        } else {
+            let secs = self.secs - duration_secs;
+            let nanos = if self.nanos >= duration.nanos {
+                self.nanos - duration.nanos
+            } else {
+                secs - 1
+                NANOS_PER_SEC as u32 - duration.nanos + self.nanos
+            };
+            
+            Result::Ok(SystemTime { secs, nanos })
+        }
+    }
+
+    /// 格式化时间为字符串（简化格式：YYYY-MM-DD HH:MM:SS）
+    pub fn format(&self) -> String {
+        let (year, month, day, hour, min, sec) = self.to_calendar_time();
+        format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02}", 
+            year, month, day, hour, min, sec)
+    }
+
+    /// 转换为日历时间
+    fn to_calendar_time(&self) -> (i32, u8, u8, u8, u8, u8) {
+        // 简化的日历转换（不考虑闰年和时区）
+        let days_since_epoch = (self.secs / SECS_PER_DAY as i64) as i32;
+        let secs_of_day = (self.secs % SECS_PER_DAY as i64) as u64;
+        
+        let hour = (secs_of_day / SECS_PER_HOUR) as u8;
+        let min = ((secs_of_day % SECS_PER_HOUR) / SECS_PER_MIN) as u8;
+        let sec = (secs_of_day % SECS_PER_MIN) as u8;
+        
+        // 简化的日期计算（假设每年 365 天）
+        let year = 1970 + days_since_epoch / 365;
+        let day_of_year = days_since_epoch % 365;
+        
+        // 简化的月份计算
+        let month = (day_of_year / 30 + 1) as u8;
+        let day = (day_of_year % 30 + 1) as u8;
+        
+        (year, month, day, hour, min, sec)
+    }
+}
+
+// ============================================================================
+// 延时函数
+// ============================================================================
+
+/// 睡眠指定的 Duration
+pub fn sleep(duration: Duration) {
+    unsafe {
+        sleep_nanos_internal(duration.as_nanos() as u64);
+    }
+}
+
+/// 睡眠指定的秒数
+pub fn sleep_secs(secs: u64) {
+    sleep(Duration::from_secs(secs));
+}
+
+/// 睡眠指定的毫秒数
+pub fn sleep_millis(millis: u64) {
+    sleep(Duration::from_millis(millis));
+}
+
+/// 睡眠指定的微秒数
+pub fn sleep_micros(micros: u64) {
+    sleep(Duration::from_micros(micros));
+}
+
+/// 睡眠指定的纳秒数
+pub fn sleep_nanos(nanos: u64) {
+    sleep(Duration::from_nanos(nanos));
+}
+
+/// 忙等待（消耗 CPU）指定的 Duration
+pub fn spin_sleep(duration: Duration) {
+    let start = Instant::now();
+    while start.elapsed() < duration {
+        // 忙等待
+        unsafe { cpu_relax_internal(); }
+    }
+}
+
+// ============================================================================
+// 计时器
+// ============================================================================
+
+/// 简单的计时器
+pub struct Timer {
+    start: Instant,
+    interval: Duration,
+}
+
+impl Timer {
+    /// 创建一个新的计时器
+    pub fn new(interval: Duration) -> Timer {
+        Timer {
+            start: Instant::now(),
+            interval: interval,
+        }
+    }
+
+    /// 检查是否到了下一个时间点
+    pub fn is_ready(&self) -> bool {
+        self.start.elapsed() >= self.interval
+    }
+
+    /// 等待直到下一个时间点
+    pub fn wait(&self) {
+        let elapsed = self.start.elapsed();
+        if elapsed < self.interval {
+            sleep(self.interval.sub(elapsed).unwrap());
+        }
+    }
+
+    /// 重置计时器
+    pub fn reset(&mut self) {
+        self.start = Instant::now();
+    }
+
+    /// 获取已经过去的时间
+    pub fn elapsed(&self) -> Duration {
+        self.start.elapsed()
+    }
+
+    /// 获取剩余时间
+    pub fn remaining(&self) -> Duration {
+        let elapsed = self.start.elapsed();
+        self.interval.sub(elapsed).unwrap_or(Duration::zero())
+    }
+}
+
+// ============================================================================
+// 便捷函数
+// ============================================================================
+
+/// 测量函数执行时间
+pub fn measure<F, T>(f: F) -> (T, Duration)
+where
+    F: FnOnce() -> T,
+{
+    let start = Instant::now();
+    let result = f();
+    let elapsed = start.elapsed();
+    (result, elapsed)
+}
+
+/// 超时执行函数
+pub fn timeout<F, T>(f: F, max_duration: Duration) -> Result<T, ()>
+where
+    F: FnOnce() -> T,
+{
+    let start = Instant::now();
+    let result = f();
+    
+    if start.elapsed() <= max_duration {
+        Result::Ok(result)
+    } else {
+        Result::Err(())
+    }
+}
+
+/// 获取当前时间戳（秒）
+pub fn timestamp() -> i64 {
+    SystemTime::now().unix_timestamp()
+}
+
+/// 获取当前时间戳（毫秒）
+pub fn timestamp_millis() -> i128 {
+    let now = SystemTime::now();
+    (now.secs as i128 * 1000) + (now.nanos as i128 / 1_000_000)
+}
+
+/// 获取单调递增的时间计数器（纳秒）
+pub fn monotonic_nanos() -> u64 {
+    unsafe { get_time_nanos_internal() }
+}
+
+/// 格式化 Duration 为可读字符串
+pub fn format_duration(duration: Duration) -> String {
+    let secs = duration.as_secs();
+    let nanos = duration.nanos;
+    
+    if secs >= 3600 {
+        let hours = secs / 3600;
+        let mins = (secs % 3600) / 60;
+        let secs = secs % 60;
+        format!("{:02}:{:02}:{:02}", hours, mins, secs)
+    } else if secs >= 60 {
+        let mins = secs / 60;
+        let secs = secs % 60;
+        let millis = nanos / 1_000_000;
+        format!("{:02}:{:02}.{:03}", mins, secs, millis)
+    } else if secs > 0 {
+        let millis = nanos / 1_000_000;
+        format!("{}.{:03}s", secs, millis)
+    } else if nanos >= 1_000_000 {
+        format!("{}ms", nanos / 1_000_000)
+    } else if nanos >= 1_000 {
+        format!("{}μs", nanos / 1_000)
+    } else {
+        format!("{}ns", nanos)
+    }
+}
+
+// ============================================================================
+// 内部函数声明
+// ============================================================================
+
+extern "builtin" fn get_time_nanos_internal() -> u64;
+extern "builtin" fn get_system_time_internal() -> (i64, u32);
+extern "builtin" fn sleep_nanos_internal(nanos: u64);
+extern "builtin" fn cpu_relax_internal();

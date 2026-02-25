@@ -1,0 +1,46 @@
+module functions;
+
+fn add(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+
+fn subtract(a: i32, b: i32) -> i32 {
+    return a - b;
+}
+
+fn multiply(a: i32, b: i32) -> i32 {
+    return a * b;
+}
+
+fn divide(a: i32, b: i32) -> i32 {
+    return a / b;
+}
+
+fn factorial(n: i32) -> i32 {
+    if n <= 1 {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+pub fn main() {
+    let sum = add(10, 20);
+    println("10 + 20 = ");
+    println(sum);
+
+    let diff = subtract(50, 15);
+    println("50 - 15 = ");
+    println(diff);
+
+    let prod = multiply(6, 7);
+    println("6 * 7 = ");
+    println(prod);
+
+    let quot = divide(100, 4);
+    println("100 / 4 = ");
+    println(quot);
+
+    let fact = factorial(5);
+    println("5! = ");
+    println(fact);
+}
