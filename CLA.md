@@ -11,6 +11,7 @@
 - **"贡献"**：指您提交给项目的任何原创作品，包括但不限于源代码、文档、设计、想法或其他任何形式的作品。
 - **"项目"**：指 BoxLang 编程语言项目及其相关仓库。
 - **"提交"**：指您以任何形式向项目提供的贡献，包括但不限于 Git 提交、Pull Request、Issue 评论等。
+- **"衍生作品"**：指基于贡献创作的任何作品，包括修改、翻译、改编等。
 
 ## 授权许可
 
@@ -99,6 +100,7 @@ By submitting contributions to this project, you confirm that you have read, und
 - **"Contribution"**: Any original work of authorship you submit to the project, including but not limited to source code, documentation, designs, ideas, or any other form of work.
 - **"Project"**: The BoxLang programming language project and its related repositories.
 - **"Submit"**: Any form of contribution you provide to the project, including but not limited to Git commits, Pull Requests, Issue comments, etc.
+- **"Derivative Works"**: Any work based on the Contribution, including modifications, translations, adaptations, etc.
 
 ### Grant of License
 
@@ -174,6 +176,95 @@ By submitting a Contribution to this Project, you confirm that you have read, un
 
 ---
 
-**最后更新日期 / Last Updated**: 2026-02-25
+## Beitragslizenzvereinbarung (Deutsche Version)
 
-**项目维护者 / Project Maintainers**: BoxLang Community
+### Übersicht
+
+Vielen Dank für Ihr Interesse an einem Beitrag zum BoxLang-Projekt! Diese Beitragslizenzvereinbarung (im Folgenden "Vereinbarung") ist eine rechtliche Vereinbarung zwischen Ihnen ("Mitwirkender") und den BoxLang-Projektbetreuern ("Projekt").
+
+Durch die Einreichung von Beiträgen zu diesem Projekt bestätigen Sie, dass Sie diese Vereinbarung gelesen, verstanden und sich damit einverstanden erklärt haben, an ihre Bedingungen gebunden zu sein.
+
+### Definitionen
+
+- **"Beitrag"**: Jedes urheberrechtlich geschützte Originalwerk, das Sie dem Projekt einreichen, einschließlich, aber nicht beschränkt auf Quellcode, Dokumentation, Designs, Ideen oder andere Formen von Arbeit.
+- **"Projekt"**: Das BoxLang-Programmiersprachenprojekt und seine verwandten Repositories.
+- **"Einreichen"**: Jede Form von Beitrag, die Sie dem Projekt zur Verfügung stellen, einschließlich, aber nicht beschränkt auf Git-Commits, Pull Requests, Issue-Kommentare usw.
+- **"Abgeleitete Werke"**: Jedes Werk, das auf dem Beitrag basiert, einschließlich Änderungen, Übersetzungen, Anpassungen usw.
+
+### Lizenzgewährung
+
+#### Urheberrechtslizenzgewährung
+
+Sie gewähren dem Projekt und seinen Empfängern hiermit eine unbefristete, weltweite, gebührenfreie, nicht-exklusive, unwiderrufliche Urheberrechtslizenz zur Nutzung, Vervielfältigung, Änderung, Verbreitung, öffentlichen Anzeige, öffentlichen Aufführung, Unterlizenzierung Ihres Beitrags und zur Erstellung abgeleiteter Werke auf Basis Ihres Beitrags, einschließlich, aber nicht beschränkt auf folgende Rechte:
+
+1. Aufnahme Ihres Beitrags in das Projekt
+2. Verbreitung Ihres Beitrags unter dem Namen des Projekts
+3. Lizenzierung Ihres Beitrags unter jeder vom Projekt gewählten Open-Source-Lizenz (derzeit die MIT-Lizenz)
+
+#### Patentlizenzgewährung
+
+Sie gewähren dem Projekt und seinen Empfängern hiermit eine unbefristete, weltweite, gebührenfreie, nicht-exklusive, unwiderrufliche Patentlizenz zur Herstellung, Nutzung, zum Verkauf, zum Angebot zum Verkauf, zum Import Ihres Beitrags und zur anderweitigen Verfügung über Ihren Beitrag.
+
+### Ihre Erklärungen und Garantien
+
+Durch die Einreichung eines Beitrags erklären und garantieren Sie, dass:
+
+1. **Originalität**: Sie der ursprüngliche Autor des Beitrags sind oder die Befugnis haben, den Beitrag im Namen des ursprünglichen Autors einzureichen.
+
+2. **Gesetzliche Rechte**: Sie die für die Einreichung des Beitrags erforderlichen gesetzlichen Rechte haben, einschließlich, aber nicht beschränkt auf Urheber- und Patentrechte.
+
+3. **Keine Verletzung**: Ihr Beitrag keine Rechte Dritter an geistigem Eigentum oder anderen Rechten verletzt, einschließlich, aber nicht beschränkt auf Urheberrecht, Patent, Marke, Geschäftsgeheimnis oder Privatsphäre.
+
+4. **Keine Vertraulichkeitsverpflichtungen**: Ihr Beitrag keine Informationen enthält, die Sie durch Vertrag, Arbeitsverhältnis oder anderweitig zur Vertraulichkeit verpflichtet sind.
+
+5. **Keine Drittlizenzen**: Ihr Beitrag keine Lizenz oder Zustimmung eines Dritten erfordert.
+
+6. **Arbeitsverhältnis**: Wenn Ihr Beitrag während der Beschäftigung erstellt wurde, haben Sie die erforderliche Genehmigung Ihres Arbeitgebers zur Einreichung des Beitrags erhalten.
+
+### Rechte, die Sie behalten
+
+Diese Vereinbarung überträgt nicht das Eigentum am Urheberrecht an Ihrem Beitrag auf das Projekt. Sie behalten folgende Rechte:
+
+1. Nutzung Ihres Beitrags für andere Zwecke
+2. Lizenzierung Ihres Beitrags an andere Parteien
+3. Veröffentlichung Ihres Beitrags in Ihrem eigenen Namen
+
+### Projektrechte
+
+Das Projekt hat das Recht:
+
+1. Ihren Beitrag in beliebiger Weise zu nutzen
+2. Ihren Beitrag unter dem Namen des Projekts zu verbreiten
+3. Ihren Beitrag unter jeder vom Projekt gewählten Lizenz zu lizenzieren
+4. Ihren Beitrag zu ändern, zu verbessern oder zu entfernen
+5. Ihren Beitrag in andere Werke aufzunehmen
+
+### Benachrichtigungspflicht
+
+Wenn Sie wissen oder Grund zu der Annahme haben, dass Ihr Beitrag Gegenstand von Rechten an geistigem Eigentum Dritter ist, müssen Sie die Projektbetreuer unverzüglich benachrichtigen.
+
+### Mitwirkenden-Identität
+
+Sie stimmen zu, dass Ihr Beitrag Ihnen zugeschrieben werden kann (z. B. Ihr GitHub-Benutzername, Ihr echter Name oder Ihre E-Mail-Adresse). Wenn Sie anonym beitragen möchten, geben Sie dies bitte bei der Einreichung an.
+
+### Anwendbares Recht und Streitbeilegung
+
+Diese Vereinbarung unterliegt den Gesetzen der Volksrepublik China (ohne Berücksichtigung von Kollisionsnormen). Jeder Streit, der aus oder im Zusammenhang mit dieser Vereinbarung entsteht, soll zunächst durch freundliche Verhandlung gelöst werden. Wenn die Verhandlung fehlschlägt, kann jede Partei den Streit vor ein zuständiges Gericht bringen.
+
+### Änderung der Vereinbarung
+
+Die Projektbetreuer behalten sich das Recht vor, diese Vereinbarung jederzeit zu ändern. Die geänderte Vereinbarung wird im Projekt-Repository veröffentlicht. Beiträge, die Sie nach der Änderung einreichen, unterliegen der neuen Vereinbarung.
+
+### Gesamte Vereinbarung
+
+Diese Vereinbarung stellt die gesamte Vereinbarung zwischen Ihnen und dem Projekt bezüglich der Beiträge dar und ersetzt alle vorherigen mündlichen oder schriftlichen Vereinbarungen.
+
+### Annahme
+
+Durch die Einreichung eines Beitrags zu diesem Projekt bestätigen Sie, dass Sie die Bedingungen dieser Vereinbarung gelesen, verstanden und sich damit einverstanden erklärt haben, an sie gebunden zu sein.
+
+---
+
+**最后更新日期 / Last Updated / Zuletzt aktualisiert**: 2026-02-26
+
+**项目维护者 / Project Maintainers / Projektbetreuer**: BoxLang Community
