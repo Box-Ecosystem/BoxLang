@@ -16,7 +16,7 @@ BoxLang is a versatile system-level programming language designed for various en
 ### Installation
 
 ```bash
-git clone https://github.com/NaAIO27/boxlang.git
+git clone https://github.com/Box-Ecosystem/BoxLang.git
 cd boxlang/compiler
 cargo build --release
 ```
