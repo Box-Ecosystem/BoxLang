@@ -172,7 +172,7 @@ A: BoxLang uses AOT (Ahead-of-Time) compilation and zero-cost abstractions, simi
 
 Join our community to connect with other BoxLang users and contributors:
 
-- [BoxLang GitHub Issues](https://github.com/NaAIO27/boxlang/issues)
+- [BoxLang GitHub Issues](https://github.com/Box-Ecosystem/BoxLang/issues)
 
 ## Disclaimer
 
