@@ -193,7 +193,7 @@ A: BoxLang 使用 AOT（预先）编译和零成本抽象，类似于 Rust。
 
 加入我们的社区，与其他 BoxLang 用户和贡献者联系：
 
-- [BoxLang GitHub Issues](https://github.com/NaAIO27/boxlang/issues)
+- [BoxLang GitHub Issues](https://github.com/Box-Ecosystem/BoxLang/issues)
 
 ## 免责声明
 
