@@ -39,7 +39,7 @@ Comprehensive tutorials are available in multiple languages:
 
 ```bash
 # Clone the repository
-git clone https://github.com/NaAIO27/boxlang.git
+git clone https://github.com/Box-Ecosystem/BoxLang.git
 cd boxlang/compiler
 
 # Build the compiler
