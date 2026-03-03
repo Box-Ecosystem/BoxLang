@@ -1,20 +1,77 @@
-# Test files
-test/
+# Rust build artifacts
+/target/
+**/target/
+*.rlib
+*.rlib.rmeta
+*.so
+*.dylib
+*.dll
+*.dll.lib
 
-# Build artifacts
-target/
+# BoxLang compiled outputs
+*.exe
+*.pdb
+*.ilk
+*.o
+*.obj
+*.ll
+*.s
+*.ilk
+*.exp
 
-# IDE files
-.vscode/
+# Build configuration
+**/Cargo.lock
+**/box.toml.lock
+
+# IDE and editor files
 .idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+*.bak
+*.tmp
 
-# OS files
+# Rust analyzer
+.rust-analyzer/
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Test outputs and temporary files
+test/*.c
+test/*.ilk
+test/*.pdb
+test/*.exp
+!**/README.md
+
+# Debug logs
+*.log
+logs/
+
+# Coverage reports
+*.gcda
+*.gcno
+*.gcov
+coverage/
+tarpaulin-target/
+
+# Benchmark results
+criterion/
+
+# Documentation build
+docs/book/
+docs/_build/
+
+# Temporary test files
+**/test_hello
+**/test_abs
+**/hello_test
