@@ -4,14 +4,14 @@
 //! whose results are never used.
 //!
 //! For example:
-//! ```
+//! ```text
 //! _1 = 5      // dead code - result never used
 //! _2 = 10
 //! return _2
 //! ```
 //!
 //! Becomes:
-//! ```
+//! ```text
 //! _2 = 10
 //! return _2
 //! ```

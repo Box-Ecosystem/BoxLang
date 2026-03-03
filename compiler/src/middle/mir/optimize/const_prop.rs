@@ -1,8 +1,9 @@
 //! Constant Propagation Optimization
 //!
 //! This pass propagates constant values to their uses.
+//!
 //! For example:
-//! ```
+//! ```text
 //! _1 = 5
 //! _2 = _1 + 3  // becomes: _2 = 5 + 3
 //! ```

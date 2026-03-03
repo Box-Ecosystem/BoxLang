@@ -239,7 +239,7 @@ mod tests {
 /// In Rust, orphan rules prevent implementing foreign traits for foreign types.
 /// At least one of the trait or the type must be local to the crate.
 pub mod orphan_rules {
-    use crate::ast::{Ident, Path, Type};
+    use crate::ast::{Path, Type};
 
     /// Check if a trait implementation violates orphan rules
     ///

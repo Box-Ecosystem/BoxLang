@@ -8,7 +8,7 @@
 //! - https://docs.rs/cranelift-frontend
 
 use crate::middle::mir::{
-    BasicBlock, BinOp, Constant, FloatType, IntType, Local, LocalDecl, MirBody, Operand, Place,
+    BasicBlock, BinOp, Constant, Local, MirBody, Operand,
     Rvalue, Scalar, Statement, Terminator, TerminatorKind, UnOp,
 };
 use cranelift::prelude::*;
@@ -366,7 +366,7 @@ impl<'a, 'b> FunctionTranslator<'a, 'b> {
 
     /// Declare all locals as Cranelift variables
     fn declare_locals(&mut self) {
-        for (i, local_decl) in self.body.local_decls.iter().enumerate() {
+        for (i, _local_decl) in self.body.local_decls.iter().enumerate() {
             let local = Local(i as u32);
             let var = Variable::new(self.next_var_index);
             self.next_var_index += 1;

@@ -151,9 +151,8 @@ impl JitContext {
 
     /// Compile a MIR body to JIT code
     pub fn compile(&mut self, name: &str, body: &MirBody) -> JitResult<JitFunctionHandle> {
-        // Generate LLVM IR first
         let mut ir_builder = super::ir_builder::LlvmIrBuilder::new();
-        let ir = ir_builder.build_function(name, body)?;
+        let _ir = ir_builder.build_function(name, body)?;
 
         // In a full implementation with inkwell ORC JIT:
         // 1. Parse the IR into a module

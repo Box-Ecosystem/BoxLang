@@ -4,7 +4,7 @@
 //! result on every iteration and moves them outside the loop.
 //!
 //! For example:
-//! ```
+//! ```text
 //! for i in 0..n {
 //!     let x = a + b;  // a and b are not modified in the loop
 //!     let y = x * i;
@@ -12,7 +12,7 @@
 //! ```
 //!
 //! Becomes:
-//! ```
+//! ```text
 //! let x = a + b;  // Moved outside the loop
 //! for i in 0..n {
 //!     let y = x * i;
@@ -128,7 +128,7 @@ impl LoopInvariantCodeMotion {
         loop_info.body.insert(current);
 
         if let Some(block) = body.basic_blocks.get(current.index()) {
-            if let Some(ref terminator) = block.terminator {
+            if let Some(ref _terminator) = block.terminator {
                 for predecessor in Self::get_predecessors_hint(body, current) {
                     if predecessor != header {
                         self.find_loop_body(body, predecessor, header, loop_info);
@@ -211,7 +211,7 @@ impl LoopInvariantCodeMotion {
     fn is_operand_invariant(
         &self,
         operand: &Operand,
-        loop_info: &LoopInfo,
+        _loop_info: &LoopInfo,
         defined_outside: &HashSet<Local>,
     ) -> bool {
         match operand {
@@ -224,7 +224,7 @@ impl LoopInvariantCodeMotion {
 
     fn can_hoist_safely(
         &self,
-        place: &Place,
+        _place: &Place,
         rvalue: &Rvalue,
         _loop_info: &LoopInfo,
         _body: &MirBody,

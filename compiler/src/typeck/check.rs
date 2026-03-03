@@ -695,14 +695,17 @@ impl TypeChecker {
         for item in &impl_block.items {
             if let ImplItem::Function(func) = item {
                 let receiver = if let Some(first_param) = func.params.first() {
-                    match first_param.name.as_str() {
-                        "self" => crate::typeck::sym::MethodReceiver::Value,
-                        "&self" | "self" if matches!(first_param.ty, Type::Ref(_, false)) => {
-                            crate::typeck::sym::MethodReceiver::Ref
+                    let param_name = first_param.name.as_str();
+                    match param_name {
+                        "self" => {
+                            match &first_param.ty {
+                                Type::Ref(_, false) => crate::typeck::sym::MethodReceiver::Ref,
+                                Type::Ref(_, true) => crate::typeck::sym::MethodReceiver::RefMut,
+                                _ => crate::typeck::sym::MethodReceiver::Value,
+                            }
                         }
-                        "&mut self" | "self" if matches!(first_param.ty, Type::Ref(_, true)) => {
-                            crate::typeck::sym::MethodReceiver::RefMut
-                        }
+                        "&self" => crate::typeck::sym::MethodReceiver::Ref,
+                        "&mut self" => crate::typeck::sym::MethodReceiver::RefMut,
                         _ => {
                             if matches!(first_param.ty, Type::Ref(_, false)) {
                                 crate::typeck::sym::MethodReceiver::Ref
@@ -943,7 +946,7 @@ impl TypeChecker {
             
             if is_self_param {
                 let self_ty = match &first_param.ty {
-                    Type::Ref(inner, is_mut) => {
+                    Type::Ref(_inner, is_mut) => {
                         Ty::Ref(
                             Box::new(impl_ty.clone()),
                             if *is_mut { Mutability::Mut } else { Mutability::Not }
@@ -1422,9 +1425,8 @@ impl TypeChecker {
                 }))
             }
             _ => {
-                // Return the parent enum type for user-defined variants
                 if let Some(type_symbol) = self.symbol_table.lookup(type_name) {
-                    if let Ty::Adt(adt) = &type_symbol.ty {
+                    if let Ty::Adt(_adt) = &type_symbol.ty {
                         return Ok(type_symbol.ty.clone());
                     }
                 }

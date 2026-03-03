@@ -7,7 +7,7 @@
 //! - Async/await support
 
 use std::collections::VecDeque;
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Condvar, Mutex};
 use std::thread;
 
 pub mod channel;
@@ -25,7 +25,7 @@ pub use memory::{
 };
 pub use scheduler::{Scheduler, Task, TaskId};
 
-/// Thread-local storage for the current task
+// Thread-local storage for the current task
 thread_local! {
     static CURRENT_TASK: std::cell::RefCell<Option<TaskId>> = std::cell::RefCell::new(None);
 }

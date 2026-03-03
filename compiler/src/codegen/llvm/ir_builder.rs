@@ -209,18 +209,12 @@ impl LlvmIrBuilder {
                 self.emit_line(&format!("store {} {}, {}* {}", ty, llvm_value, ty, ptr));
             }
             Statement::StorageLive(local) => {
-                // In LLVM, we use lifetime intrinsics for storage markers
-                // This helps with optimization passes
-                let ptr = self.get_local_ptr(*local);
+                let _ptr = self.get_local_ptr(*local);
                 self.emit_line(&format!("; StorageLive({})", local.0));
-                // Optionally emit llvm.lifetime.start intrinsic
-                // self.emit_line(&format!("call void @llvm.lifetime.start.p0i8(i64 -1, i8* {})", ptr));
             }
             Statement::StorageDead(local) => {
-                let ptr = self.get_local_ptr(*local);
+                let _ptr = self.get_local_ptr(*local);
                 self.emit_line(&format!("; StorageDead({})", local.0));
-                // Optionally emit llvm.lifetime.end intrinsic
-                // self.emit_line(&format!("call void @llvm.lifetime.end.p0i8(i64 -1, i8* {})", ptr));
             }
             Statement::Nop => {
                 // No operation
@@ -252,14 +246,13 @@ impl LlvmIrBuilder {
                 self.emit_line(&format!("{} = load {}, {}* {}", var, ty, ty, ptr));
                 Ok(var)
             }
-            Rvalue::Ref(place, mutability) => {
-                // Return the pointer address as i64
+            Rvalue::Ref(place, _mutability) => {
                 let ptr = self.get_place_pointer(place)?;
                 let var = self.fresh_var();
                 self.emit_line(&format!("{} = ptrtoint i8* {} to i64", var, ptr));
                 Ok(var)
             }
-            Rvalue::AddressOf(place, mutability) => {
+            Rvalue::AddressOf(place, _mutability) => {
                 // Return the raw pointer address
                 let ptr = self.get_place_pointer(place)?;
                 let var = self.fresh_var();
@@ -673,8 +666,7 @@ impl LlvmIrBuilder {
     }
 
     /// Get the LLVM type for a local
-    fn get_local_type(&self, local: Local) -> String {
-        // Default to i64 for now; in production, look up actual type
+    fn get_local_type(&self, _local: Local) -> String {
         "i64".to_string()
     }
 

@@ -11,11 +11,7 @@
 //! - Object file and executable output
 //! - JIT compilation support
 
-use crate::middle::mir::{
-    BasicBlock, BinOp, Constant, FloatType, IntType, Local, MirBody, Operand, Place, Rvalue,
-    Scalar, Statement, Terminator, UnOp,
-};
-use std::collections::HashMap;
+use crate::middle::mir::MirBody;
 use std::path::Path;
 
 // Re-export the IR builder module

@@ -2,14 +2,14 @@
 //!
 //! This pass identifies and eliminates redundant computations.
 //! For example:
-//! ```
+//! ```text
 //! _1 = a + b
 //! _2 = a + b  // This is redundant, can be replaced with _2 = _1
 //! _3 = a + b  // This is also redundant
 //! ```
 //!
 //! Becomes:
-//! ```
+//! ```text
 //! _1 = a + b
 //! _2 = _1
 //! _3 = _1

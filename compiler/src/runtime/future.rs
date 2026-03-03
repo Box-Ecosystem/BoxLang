@@ -157,13 +157,9 @@ where
     type Output = (F1::Output, F2::Output);
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        // SAFETY: We know this is safe because Join is Unpin
         let this = unsafe { self.get_unchecked_mut() };
 
-        // Poll f1 if not done
-        if this.f1.is_some() {
-            // SAFETY: We're not moving the future, just polling it
-            let f1 = this.f1.as_mut().unwrap();
+        if let Some(ref mut f1) = this.f1 {
             let f1_pin = unsafe { Pin::new_unchecked(f1) };
             match f1_pin.poll(cx) {
                 Poll::Ready(result) => {
@@ -174,10 +170,7 @@ where
             }
         }
 
-        // Poll f2 if not done
-        if this.f2.is_some() {
-            // SAFETY: We're not moving the future, just polling it
-            let f2 = this.f2.as_mut().unwrap();
+        if let Some(ref mut f2) = this.f2 {
             let f2_pin = unsafe { Pin::new_unchecked(f2) };
             match f2_pin.poll(cx) {
                 Poll::Ready(result) => {
@@ -188,9 +181,11 @@ where
             }
         }
 
-        // Check if both are done
         if this.f1.is_none() && this.f2.is_none() {
-            Poll::Ready((this.result1.take().unwrap(), this.result2.take().unwrap()))
+            match (this.result1.take(), this.result2.take()) {
+                (Some(r1), Some(r2)) => Poll::Ready((r1, r2)),
+                _ => unreachable!("both futures completed but results missing"),
+            }
         } else {
             Poll::Pending
         }

@@ -102,14 +102,12 @@ fn translate_body(
 ) -> Result<(), CraneliftError> {
     let mut blocks: HashMap<BasicBlock, Block> = HashMap::new();
 
-    // First pass: create all blocks
-    for (idx, _) in body.basic_blocks.iter().enumerate() {
-        let block = if idx == 0 {
-            // Entry block already created
-            builder.current_block().unwrap()
-        } else {
-            builder.create_block()
-        };
+    let entry_block = builder.current_block()
+        .ok_or_else(|| CraneliftError::CompilationFailed("no current block".to_string()))?;
+    blocks.insert(BasicBlock(0), entry_block);
+
+    for (idx, _) in body.basic_blocks.iter().enumerate().skip(1) {
+        let block = builder.create_block();
         blocks.insert(BasicBlock(idx as u32), block);
     }
 
@@ -387,17 +385,16 @@ fn translate_terminator(
             let cond_val = translate_operand(builder, cond, variables)?;
             let target_block = blocks[target];
             
-            // Convert condition to bool (non-zero = true)
             let zero = builder.ins().iconst(types::I64, 0);
             let is_true = builder.ins().icmp(IntCC::NotEqual, cond_val, zero);
             
-            // Create fail block that returns
             let fail_block = builder.create_block();
             builder.switch_to_block(fail_block);
             builder.ins().return_(&[]);
             
-            // Branch
-            builder.switch_to_block(builder.current_block().unwrap());
+            if let Some(current_block) = builder.current_block() {
+                builder.switch_to_block(current_block);
+            }
             builder.ins().brif(is_true, target_block, &[], fail_block, &[]);
         }
     }

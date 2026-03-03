@@ -1238,12 +1238,13 @@ impl CCodeGen {
             .collect();
 
         // Generate extern declaration
+        let params_str = if params.is_empty() { "void".to_string() } else { params.join(", ") };
         if abi == "C" || abi == "cdecl" {
             self.write_line(&format!(
                 "extern {} {}({});",
                 ret_type,
                 name,
-                if params.is_empty() { "void" } else { &params.join(", ") }
+                params_str
             ));
         } else {
             // For other ABIs, add a comment
@@ -1252,7 +1253,7 @@ impl CCodeGen {
                 "extern {} {}({});",
                 ret_type,
                 name,
-                if params.is_empty() { "void" } else { &params.join(", ") }
+                params_str
             ));
         }
         self.write("\n");
@@ -1299,11 +1300,12 @@ impl CCodeGen {
             .collect();
 
         // Generate callback typedef
+        let params_str = if params.is_empty() { "void".to_string() } else { params.join(", ") };
         self.write_line(&format!(
             "typedef {} (*{})({});",
             ret_type,
             name,
-            if params.is_empty() { "void" } else { &params.join(", ") }
+            params_str
         ));
         self.write("\n");
         Ok(())
@@ -1350,7 +1352,7 @@ impl CCodeGen {
             .map(|p| p.name.as_str().to_string())
             .collect();
 
-        if let Some(error_type) = &wrapper.error_type {
+        if let Some(_error_type) = &wrapper.error_type {
             // Generate error handling wrapper
             self.write_line("if (setjmp(__error_jmp) != 0) {");
             self.increase_indent();

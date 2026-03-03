@@ -3,7 +3,6 @@
 //! BoxLang provides a powerful macro system similar to Rust's,
 //! including derive macros and attribute macros for metaprogramming.
 
-use crate::ast::{EnumDef, Ident, Item, StructDef};
 use std::collections::HashMap;
 
 pub mod attr;

@@ -8,7 +8,6 @@ use boxlang_compiler::{
     compiler_detector::{CCompilerDetector, CCompilerRunner, CompileOptions},
     ui::{error, final_error, final_success, header, info, init_ui, section, success, warning},
     tokenize, parse, type_check, generate_c,
-    ConstEvaluator, ConstValue,
     typeck::error::TypeError,
 };
 
@@ -352,7 +351,7 @@ fn main() -> Result<()> {
 }
 
 
-
+#[allow(dead_code)]
 fn compile_c_to_exe(c_file: &PathBuf, output: &PathBuf, opt_level: u8) -> Result<()> {
     let compiler = CCompilerDetector::detect()?;
     let opts = CompileOptions {
@@ -603,8 +602,6 @@ fn build_project(
     jobs: Option<usize>,
     package: Option<String>,
 ) -> Result<()> {
-    use std::process::Command;
-
     header("Building BoxLang Project");
 
     // Print build configuration
@@ -775,8 +772,6 @@ fn link_objects(obj_files: &[PathBuf], output: &PathBuf, release: bool) -> Resul
 }
 
 fn run_project(release: bool, args: Vec<String>) -> Result<()> {
-    use std::process::Command;
-
     header("Running BoxLang Project");
 
     if !args.is_empty() {
@@ -1292,7 +1287,7 @@ fn format_source(source: &str) -> String {
         prev_line_empty = false;
 
         // Calculate brace balance for this line
-        let (open_braces, close_braces) = count_braces(trimmed, &mut in_string, &mut string_char);
+        let (open_braces, _close_braces) = count_braces(trimmed, &mut in_string, &mut string_char);
 
         // Decrease indent for lines starting with closing braces
         let starts_with_close =

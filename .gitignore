@@ -8,6 +8,10 @@
 *.dll
 *.dll.lib
 
+# Test directory
+test/
+**/test/
+
 # BoxLang compiled outputs
 *.exe
 *.pdb

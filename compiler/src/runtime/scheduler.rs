@@ -11,7 +11,7 @@ use std::task::{Context, Poll, RawWaker, RawWakerVTable, Waker as StdWaker};
 
 use super::future::{AsyncState, Future};
 
-/// Thread-local scheduler instance
+// Thread-local scheduler instance
 thread_local! {
     static SCHEDULER: RefCell<Option<Scheduler>> = RefCell::new(None);
 }
@@ -192,7 +192,7 @@ impl Scheduler {
     }
 
     /// Spawn a new task
-    pub fn spawn<F>(&mut self, f: F) -> TaskId
+    pub fn spawn<F>(&mut self, _f: F) -> TaskId
     where
         F: FnOnce() + Send + 'static,
     {
@@ -348,7 +348,7 @@ impl<F: Future> FutureTask<F> {
 
 impl Scheduler {
     /// Spawn a future as a task
-    pub fn spawn_future<F>(&mut self, future: F) -> TaskId
+    pub fn spawn_future<F>(&mut self, _future: F) -> TaskId
     where
         F: Future<Output = ()> + Send + 'static,
     {
@@ -394,14 +394,8 @@ impl Scheduler {
     /// The waker vtable functions must correctly handle the task_id data pointer.
     /// The task_id is converted to a pointer and back, which is safe for u64 values.
     fn create_waker(&self, task_id: TaskId) -> StdWaker {
-        let tasks = self.tasks.clone();
-        // Convert task_id to a raw pointer. This is safe because:
-        // 1. TaskId is a u64, which fits in a pointer-sized integer
-        // 2. We never dereference this pointer as a real memory address
-        // 3. The vtable functions convert it back to TaskId using the u64 value
+        let _tasks = self.tasks.clone();
         let raw_waker = RawWaker::new(task_id.0 as *const (), &VTABLE);
-        // SAFETY: The RawWaker is properly constructed with a valid vtable.
-        // The data pointer is the task_id as a usize, not a real memory address.
         unsafe { StdWaker::from_raw(raw_waker) }
     }
 }

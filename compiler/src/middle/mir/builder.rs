@@ -192,7 +192,7 @@ impl MirBuilder {
     }
 
     /// Build a path call expression (e.g., Result::Ok(value))
-    fn build_path_call(&mut self, path: &Path, args: &[Expr]) -> Operand {
+    fn build_path_call(&mut self, _path: &Path, args: &[Expr]) -> Operand {
         // Build arguments
         let _args: Vec<Operand> = args.iter().map(|a| self.build_expr(a)).collect();
         // Return a placeholder for now

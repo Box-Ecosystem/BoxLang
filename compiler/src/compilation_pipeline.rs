@@ -43,7 +43,7 @@ impl CompilationPipeline {
             return Self::output_tokens(&tokens);
         }
 
-        let mut ast = Self::parsing(&source)?;
+        let ast = Self::parsing(&source)?;
 
         if req.parse_only {
             return Self::output_ast(&ast);

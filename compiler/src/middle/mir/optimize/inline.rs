@@ -88,7 +88,7 @@ impl FunctionInlining {
         &mut self,
         caller_body: &mut MirBody,
         call_site_block: usize,
-        call_site_stmt_idx: usize,
+        _call_site_stmt_idx: usize,
         callee_body: &MirBody,
         args: &[Operand],
         dest: Place,
@@ -121,17 +121,16 @@ impl FunctionInlining {
 
         caller_body.basic_blocks.append(&mut new_blocks);
 
-        let new_entry_block = block_map.get(&BasicBlock(0)).copied().unwrap();
-        
-        if let Some(caller_block) = caller_body.basic_blocks.get_mut(call_site_block) {
-            if let Some(ref mut terminator) = caller_block.terminator {
-                if let TerminatorKind::Call { target, .. } = &mut terminator.kind {
-                    *target = Some(new_entry_block);
+        if let Some(&new_entry_block) = block_map.get(&BasicBlock(0)) {
+            if let Some(caller_block) = caller_body.basic_blocks.get_mut(call_site_block) {
+                if let Some(ref mut terminator) = caller_block.terminator {
+                    if let TerminatorKind::Call { target, .. } = &mut terminator.kind {
+                        *target = Some(new_entry_block);
+                    }
                 }
             }
+            self.inlined_count += 1;
         }
-
-        self.inlined_count += 1;
     }
 
     fn create_local_mapping(

@@ -3,7 +3,7 @@
 //! Attribute macros allow custom attributes to transform items at compile time.
 
 use super::{Macro, MacroContext, MacroError, MacroResult};
-use crate::ast::{EnumDef, Function, Item, StructDef};
+use crate::ast::Item;
 
 /// Trait for attribute macros
 pub trait AttributeMacro: Macro {

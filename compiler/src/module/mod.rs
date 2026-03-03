@@ -127,8 +127,14 @@ impl ModuleSystem {
     pub fn load(&mut self, module_id: &ModuleId) -> Result<&ModuleInfo, ModuleError> {
         let key = module_id.to_string_path();
         
-        if self.modules.get(&key).map(|i| i.is_loaded).unwrap_or(false) {
-            return Ok(self.modules.get(&key).unwrap());
+        let needs_load = match self.modules.get(&key) {
+            Some(info) => !info.is_loaded,
+            None => true,
+        };
+        
+        if !needs_load {
+            return self.modules.get(&key)
+                .ok_or_else(|| ModuleError::NotFound { module: key });
         }
 
         let file_path = self.resolver.resolve(module_id, None)?;
@@ -143,7 +149,8 @@ impl ModuleSystem {
         self.modules.insert(key.clone(), info);
         self.graph.add_module(module_id.clone());
 
-        Ok(self.modules.get(&key).unwrap())
+        self.modules.get(&key)
+            .ok_or_else(|| ModuleError::NotFound { module: key })
     }
 
     pub fn get_module(&self, module_id: &ModuleId) -> Option<&ModuleInfo> {

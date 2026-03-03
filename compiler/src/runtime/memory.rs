@@ -81,7 +81,7 @@ impl MemoryStats {
     }
 }
 
-/// Thread-local memory statistics
+// Thread-local memory statistics
 thread_local! {
     static MEMORY_STATS: RefCell<MemoryStats> = RefCell::new(MemoryStats::default());
 }

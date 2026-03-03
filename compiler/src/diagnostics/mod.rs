@@ -328,7 +328,7 @@ impl DiagnosticCollector {
         self.source.lines().nth(line_num.saturating_sub(1))
     }
 
-    fn generate_underline(&self, span: &Span, column: usize) -> String {
+    fn generate_underline(&self, span: &Span, _column: usize) -> String {
         let length = span.end.saturating_sub(span.start).max(1);
         "^".repeat(length)
     }
