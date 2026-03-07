@@ -139,7 +139,7 @@ Wir begrüßen folgende Arten von Beiträgen:
 
 ```bash
 # 克隆仓库
-git clone https://github.com/NaAIO27/boxlang.git
+git clone https://github.com/Box-Ecosystem/BoxLang.git
 cd boxlang/compiler
 
 # 构建项目
@@ -187,7 +187,7 @@ boxlang/
 
 ```bash
 # Clone the repository
-git clone https://github.com/NaAIO27/boxlang.git
+git clone https://github.com/Box-Ecosystem/BoxLang.git
 cd boxlang/compiler
 
 # Build the project
@@ -235,7 +235,7 @@ boxlang/
 
 ```bash
 # Repository klonen
-git clone https://github.com/NaAIO27/boxlang.git
+git clone https://github.com/Box-Ecosystem/BoxLang.git
 cd boxlang/compiler
 
 # Projekt bauen
@@ -597,15 +597,15 @@ Bitte fügen Sie folgende Informationen bei:
 
 ### 中文
 
-- **GitHub Issues**: [https://github.com/NaAIO27/boxlang/issues](https://github.com/NaAIO27/boxlang/issues)
+- **GitHub Issues**: [https://github.com/box-ecosystem/boxlang/issues](https://github.com/box-ecosystem/boxlang/issues)
 
 ### English
 
-- **GitHub Issues**: [https://github.com/NaAIO27/boxlang/issues](https://github.com/NaAIO27/boxlang/issues)
+- **GitHub Issues**: [https://github.com/box-ecosystem/boxlang/issues](https://github.com/box-ecosystem/boxlang/issues)
 
 ### Deutsch
 
-- **GitHub Issues**: [https://github.com/NaAIO27/boxlang/issues](https://github.com/NaAIO27/boxlang/issues)
+- **GitHub Issues**: [https://github.com/box-ecosystem/boxlang/issues](https://github.com/box-ecosystem/boxlang/issues)
 
 ---
 
